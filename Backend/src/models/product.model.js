@@ -2,6 +2,11 @@ import mongoose from 'mongoose';
 import priceSchema from "./price.schema.js";
 
 const productSchema = new mongoose.Schema({
+    catalogKey: {
+        type: String,
+        unique: true,
+        sparse: true
+    },
     title: {
         type: String,
         required: true

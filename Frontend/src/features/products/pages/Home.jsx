@@ -1,124 +1,185 @@
-import React, { useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { useProduct } from '../hooks/useProduct';
+import { useDeferredValue, useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router';
-import { useNavigate } from 'react-router';
+import { getAllProducts } from '../service/product.api';
+import { setProducts } from '../state/product.slice';
+import './Home.css';
+
+const filters = [ 'All shirts', 'Oversized', 'Printed', 'Regular fit' ];
 
 const Home = () => {
+    const dispatch = useDispatch();
     const products = useSelector(state => state.product.products);
-    const user = useSelector(state => state.auth.user);
-    const { handleGetAllProducts } = useProduct();
-
-    const navigate = useNavigate();
+    const [ activeFilter, setActiveFilter ] = useState('All shirts');
+    const [ search, setSearch ] = useState('');
+    const [ sort, setSort ] = useState('featured');
+    const [ isLoading, setIsLoading ] = useState(true);
+    const [ hasError, setHasError ] = useState(false);
+    const deferredSearch = useDeferredValue(search.trim().toLowerCase());
 
     useEffect(() => {
-        handleGetAllProducts();
-    }, []);
+        getAllProducts()
+            .then(data => dispatch(setProducts(data.products)))
+            .catch(() => setHasError(true))
+            .finally(() => setIsLoading(false));
+    }, [ dispatch ]);
+
+    const visibleProducts = (products || [])
+        .filter(product => {
+            const searchableText = `${product.title} ${product.description}`.toLowerCase();
+            const matchesSearch = searchableText.includes(deferredSearch);
+            const matchesFilter = activeFilter === 'All shirts'
+                || (activeFilter === 'Oversized' && /oversized|box fit/i.test(searchableText))
+                || (activeFilter === 'Printed' && /print|geometric|paisley|floral/i.test(searchableText))
+                || (activeFilter === 'Regular fit' && /regular fit/i.test(searchableText));
+
+            return matchesSearch && matchesFilter;
+        })
+        .sort((first, second) => {
+            if (sort === 'price-low') return first.price.amount - second.price.amount;
+            if (sort === 'price-high') return second.price.amount - first.price.amount;
+            if (sort === 'latest') return new Date(second.createdAt) - new Date(first.createdAt);
+            return 0;
+        });
+
+    const formatPrice = amount => `₹${Number(amount || 0).toLocaleString('en-IN')}`;
 
     return (
-        <>
-            {/* Google Fonts */}
+        <main className="snitch-home">
             <link
-                href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap"
+                href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Manrope:wght@400;500;600;700&display=swap"
                 rel="stylesheet"
             />
 
-            <div
-                className="min-h-screen selection:bg-[#C9A96E]/30"
-                style={{ backgroundColor: '#fbf9f6', fontFamily: "'Inter', sans-serif" }}
-            >
-               
+            <div className="snitch-promo">
+                <span>THE NEW DROP IS HERE</span>
+                <span className="snitch-promo__divider">/</span>
+                <span>MADE FOR YOUR NEXT MOVE</span>
+            </div>
 
-                <div className="max-w-7xl mx-auto px-8 lg:px-16 xl:px-24">
-                    {/* ── Hero / Header ── */}
-                    <div className="pt-20 pb-20 text-center flex flex-col items-center">
-                        <span className="text-[10px] uppercase tracking-[0.24em] font-medium mb-6" style={{ color: '#C9A96E' }}>
-                            The Collection
-                        </span>
-                        <h1
-                            className="text-5xl lg:text-7xl font-light leading-tight mb-6"
-                            style={{ fontFamily: "'Cormorant Garamond', serif", color: '#1b1c1a' }}
-                        >
-                            Curated Archive
-                        </h1>
-                        <p className="max-w-xl mx-auto text-sm leading-relaxed" style={{ color: '#7A6E63' }}>
-                            Discover our latest curation of premium minimalist pieces, meticulously designed for effortless elegance and enduring quality.
-                        </p>
+            <section className="snitch-hero" aria-label="New shirt collection">
+                <div className="snitch-hero__copy">
+                    <p className="snitch-eyebrow"><span /> NEW SEASON / 026</p>
+                    <h1>WEAR<br />YOUR<br /><span>OWN RULES.</span></h1>
+                    <p className="snitch-hero__description">Big fits. Better prints. Shirts that do the talking before you do.</p>
+                    <a className="snitch-hero__cta" href="#product-feed">SHOP THE DROP <span aria-hidden="true">↘</span></a>
+                    <span className="snitch-hero__index">01 — 07</span>
+                </div>
+                <div className="snitch-hero__image">
+                    <img
+                        src="https://cdn.shopify.com/s/files/1/0420/7073/7058/files/1_c58c413c-65b0-4497-99d8-aaa73781c300.png?v=1790097314&width=1600&quality=100"
+                        srcSet="https://cdn.shopify.com/s/files/1/0420/7073/7058/files/1_c58c413c-65b0-4497-99d8-aaa73781c300.png?v=1790097314&width=1200&quality=100 1200w, https://cdn.shopify.com/s/files/1/0420/7073/7058/files/1_c58c413c-65b0-4497-99d8-aaa73781c300.png?v=1790097314&width=1600&quality=100 1600w, https://cdn.shopify.com/s/files/1/0420/7073/7058/files/1_c58c413c-65b0-4497-99d8-aaa73781c300.png?v=1790097314&width=2400&quality=100 2400w, https://cdn.shopify.com/s/files/1/0420/7073/7058/files/1_c58c413c-65b0-4497-99d8-aaa73781c300.png?v=1790097314&width=2528&quality=100 2528w"
+                        sizes="(max-width: 900px) 100vw, 50vw"
+                        alt="SNITCH Stay Sunny placement print shirt"
+                        fetchPriority="high"
+                        decoding="async"
+                    />
+                    <span className="snitch-hero__image-tag">MADE FOR THE<br />AFTER HOURS</span>
+                </div>
+            </section>
+
+            <section className="snitch-feed" id="product-feed">
+                <div className="snitch-feed__heading">
+                    <div>
+                        <p className="snitch-eyebrow">FRESH OFF THE RACK</p>
+                        <h2>THE SHIRT EDIT<span>.</span></h2>
                     </div>
-
-                    {/* ── Product Grid ── */}
-                    {products && products.length > 0 ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16 pb-32">
-                            {products.map(product => {
-                                const imageUrl = product.images && product.images.length > 0
-                                    ? product.images[ 0 ].url
-                                    : '/snitch_editorial_warm.png'; // Fallback
-
-                                return (
-                                    <div
-                                        onClick={() => navigate(`/product/${product._id}`)}
-                                        key={product._id} className="group cursor-pointer flex flex-col">
-                                        {/* Image Container */}
-                                        <div className="aspect-[4/5] overflow-hidden mb-6" style={{ backgroundColor: '#f5f3f0' }}>
-                                            <img
-                                                src={imageUrl}
-                                                alt={product.title}
-                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                                            />
-                                        </div>
-
-                                        {/* Product Details */}
-                                        <div className="flex flex-col gap-2">
-                                            <h3
-                                                className="text-xl leading-snug transition-colors duration-300 group-hover:text-[#C9A96E]"
-                                                style={{ fontFamily: "'Cormorant Garamond', serif", color: '#1b1c1a' }}
-                                            >
-                                                {product.title}
-                                            </h3>
-
-                                            <p
-                                                className="text-[12px] line-clamp-2 leading-relaxed"
-                                                style={{ color: '#7A6E63' }}
-                                            >
-                                                {product.description}
-                                            </p>
-
-                                            <div className="mt-2">
-                                                <span
-                                                    className="text-[10px] uppercase tracking-[0.2em] font-medium"
-                                                    style={{ color: '#1b1c1a' }}
-                                                >
-                                                    {product.price?.currency} {product.price?.amount?.toLocaleString()}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="py-24 text-center flex flex-col items-center">
-                            <h2 className="text-2xl mb-4" style={{ fontFamily: "'Cormorant Garamond', serif", color: '#1b1c1a' }}>
-                                No pieces available.
-                            </h2>
-                            <p className="max-w-md mx-auto text-sm leading-relaxed" style={{ color: '#7A6E63' }}>
-                                We are currently preparing our next collection. Please check back later.
-                            </p>
-                        </div>
-                    )}
+                    <p className="snitch-feed__note">Fits for wherever the day takes you.</p>
                 </div>
 
-                {/* ── Footer ── */}
-                <footer className="border-t py-12 text-center" style={{ borderColor: '#e4e2df' }}>
-                    <span
-                        className="text-[10px] uppercase tracking-[0.35em]"
-                        style={{ fontFamily: "'Cormorant Garamond', serif", color: '#C9A96E' }}
-                    >
-                        Snitch. © {new Date().getFullYear()}
-                    </span>
-                </footer>
-            </div>
-        </>
+                <div className="snitch-controls">
+                    <div className="snitch-filters" role="group" aria-label="Filter shirts">
+                        {filters.map(filter => (
+                            <button
+                                key={filter}
+                                type="button"
+                                className={activeFilter === filter ? 'is-active' : ''}
+                                onClick={() => setActiveFilter(filter)}
+                            >
+                                {filter}
+                            </button>
+                        ))}
+                    </div>
+                    <div className="snitch-tools">
+                        <label className="snitch-search">
+                            <span className="snitch-search__icon" aria-hidden="true">⌕</span>
+                            <input
+                                type="search"
+                                value={search}
+                                onChange={event => setSearch(event.target.value)}
+                                placeholder="Find your fit"
+                                aria-label="Search products"
+                            />
+                        </label>
+                        <label className="snitch-sort">
+                            <span className="snitch-sort__label">SORT</span>
+                            <select value={sort} onChange={event => setSort(event.target.value)} aria-label="Sort products">
+                                <option value="featured">Featured</option>
+                                <option value="latest">Latest</option>
+                                <option value="price-low">Price: low to high</option>
+                                <option value="price-high">Price: high to low</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+
+                <div className="snitch-results-count">
+                    {isLoading ? 'LOADING THE DROP' : `${visibleProducts.length} STYLES`}
+                </div>
+
+                {isLoading ? (
+                    <div className="snitch-empty">Loading the latest fits...</div>
+                ) : hasError ? (
+                    <div className="snitch-empty">
+                        <h3>THE RACK IS OFFLINE.</h3>
+                        <p>Start the backend and refresh to load the collection.</p>
+                        <button type="button" onClick={() => window.location.reload()}>TRY AGAIN</button>
+                    </div>
+                ) : visibleProducts.length ? (
+                    <div className="snitch-grid">
+                        {visibleProducts.map((product, index) => {
+                            const imageUrl = product.images?.[0]?.url;
+                            const fit = product.variants?.[0]?.attributes?.Fit || 'Everyday fit';
+
+                            return (
+                                <Link to={`/product/${product._id}`} key={product._id} className="snitch-product">
+                                    <div className="snitch-product__image">
+                                        {imageUrl ? (
+                                            <img src={imageUrl} alt={product.title} loading={index > 3 ? 'lazy' : 'eager'} />
+                                        ) : (
+                                            <div className="snitch-product__no-image">SNITCH.</div>
+                                        )}
+                                        <span className={`snitch-product__badge ${index % 3 === 1 ? 'snitch-product__badge--lime' : ''}`}>
+                                            {index === 0 ? 'JUST DROPPED' : index % 3 === 1 ? 'TRENDING' : 'NEW SEASON'}
+                                        </span>
+                                        <span className="snitch-product__arrow" aria-hidden="true">↗</span>
+                                    </div>
+                                    <div className="snitch-product__details">
+                                        <div>
+                                            <p className="snitch-product__fit">{fit}</p>
+                                            <h3>{product.title}</h3>
+                                        </div>
+                                        <p className="snitch-product__price">{formatPrice(product.price?.amount)}</p>
+                                    </div>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <div className="snitch-empty">
+                        <h3>NO MATCHES. YET.</h3>
+                        <p>Try another search or clear the current filter.</p>
+                        <button type="button" onClick={() => { setSearch(''); setActiveFilter('All shirts'); }}>SHOW ALL SHIRTS</button>
+                    </div>
+                )}
+            </section>
+
+            <footer className="snitch-footer">
+                <span>SNITCH.</span>
+                <span>MADE FOR THE WAY YOU MOVE.</span>
+                <span>© {new Date().getFullYear()}</span>
+            </footer>
+        </main>
     );
 };
 

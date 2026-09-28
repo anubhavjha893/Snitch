@@ -31,3 +31,13 @@ export async function getMe() {
 
     return response.data
 }
+
+export async function logout() {
+    const response = await authApiInstance.post("/logout")
+    return response.data
+}
+
+export async function updateProfile({ fullname, contact }) {
+    const response = await authApiInstance.patch("/profile", { fullname, contact })
+    return response.data
+}

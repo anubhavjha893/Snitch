@@ -1,39 +1,55 @@
-import { addItem, getCart, incrementCartItemApi, createCartOrder, verifyCartOrder } from "../service/cart.api"
+import { useCallback } from "react"
+import { addItem, getCart, incrementCartItemApi, decrementCartItemApi, removeCartItemApi, createCartOrder, verifyCartOrder, getOrderDetails } from "../service/cart.api"
 import { useDispatch } from "react-redux"
-import { setCart, incrementCartItem } from "../state/cart.slice"
+import { setCart } from "../state/cart.slice"
 
 
 export const useCart = () => {
 
     const dispatch = useDispatch()
 
-    async function handleAddItem({ productId, variantId }) {
-        const data = await addItem({ productId, variantId })
-
-        return data
-    }
-
-    async function handleGetCart() {
+    const handleGetCart = useCallback(async () => {
         const data = await getCart()
-        console.log(data)
         dispatch(setCart(data.cart))
-    }
+        return data.cart
+    }, [ dispatch ])
 
-    async function handleIncrementCartItem({ productId, variantId }) {
+    const handleAddItem = useCallback(async ({ productId, variantId }) => {
+        const data = await addItem({ productId, variantId })
+        await handleGetCart()
+        return data
+    }, [ handleGetCart ])
+
+    const handleIncrementCartItem = useCallback(async ({ productId, variantId }) => {
         await incrementCartItemApi({ productId, variantId })
-        dispatch(incrementCartItem({ productId, variantId }))
-    }
+        return handleGetCart()
+    }, [ handleGetCart ])
 
-    async function handleCreateCartOrder() {
+    const handleDecrementCartItem = useCallback(async ({ productId, variantId }) => {
+        await decrementCartItemApi({ productId, variantId })
+        return handleGetCart()
+    }, [ handleGetCart ])
+
+    const handleRemoveCartItem = useCallback(async ({ productId, variantId }) => {
+        await removeCartItemApi({ productId, variantId })
+        return handleGetCart()
+    }, [ handleGetCart ])
+
+    const handleCreateCartOrder = useCallback(async () => {
         const data = await createCartOrder()
-        return data.order
-    }
+        return data
+    }, [])
 
-    async function handleVerifyCartOrder({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) {
+    const handleVerifyCartOrder = useCallback(async ({ razorpay_order_id, razorpay_payment_id, razorpay_signature }) => {
         const data = await verifyCartOrder({ razorpay_order_id, razorpay_payment_id, razorpay_signature })
         return data.success
-    }
+    }, [])
 
-    return { handleAddItem, handleGetCart, handleIncrementCartItem, handleCreateCartOrder, handleVerifyCartOrder }
+    const handleGetOrderDetails = useCallback(async orderId => {
+        const data = await getOrderDetails(orderId)
+        return data.order
+    }, [])
+
+    return { handleAddItem, handleGetCart, handleIncrementCartItem, handleDecrementCartItem, handleRemoveCartItem, handleCreateCartOrder, handleVerifyCartOrder, handleGetOrderDetails }
 
 }

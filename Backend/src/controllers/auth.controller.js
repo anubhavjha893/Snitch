@@ -11,7 +11,13 @@ async function sendTokenResponse(user, res, message) {
         expiresIn: "7d"
     })
 
-    res.cookie("token", token)
+    res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: config.NODE_ENV === "production",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: "/"
+    })
 
     res.status(200).json({
         message,
@@ -102,7 +108,13 @@ export const googleCallback = async (req, res) => {
         expiresIn: "7d"
     })
 
-    res.cookie("token", token)
+    res.cookie("token", token, {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: config.NODE_ENV === "production",
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: "/"
+    })
 
     res.redirect("http://localhost:5173/")
 }
@@ -119,6 +131,35 @@ export const getMe = async (req, res) => {
             contact: user.contact,
             fullname: user.fullname,
             role: user.role
+        }
+    })
+}
+
+export const logout = (_req, res) => {
+    res.clearCookie("token", {
+        httpOnly: true,
+        sameSite: "lax",
+        secure: config.NODE_ENV === "production",
+        path: "/"
+    })
+
+    return res.status(200).json({ message: "Logged out successfully", success: true })
+}
+
+export const updateProfile = async (req, res) => {
+    req.user.fullname = req.body.fullname.trim()
+    req.user.contact = req.body.contact.trim()
+    await req.user.save()
+
+    return res.status(200).json({
+        message: "Profile updated successfully",
+        success: true,
+        user: {
+            id: req.user._id,
+            email: req.user.email,
+            contact: req.user.contact,
+            fullname: req.user.fullname,
+            role: req.user.role
         }
     })
 }

@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { useProduct } from '../hooks/useProduct';
+import { getProductById } from '../service/product.api';
 import { useParams } from 'react-router';
 
 // Helper icons
@@ -11,6 +12,8 @@ const SellerProductDetails = () => {
   const [ localVariants, setLocalVariants ] = useState([]);
   const [ isAddingVariant, setIsAddingVariant ] = useState(false);
   const [ loading, setLoading ] = useState(true);
+  const [ savingStockIndex, setSavingStockIndex ] = useState(null);
+  const [ stockMessage, setStockMessage ] = useState('');
 
   // UI state for inputs to maintain focus
   const [ attributeInputs, setAttributeInputs ] = useState([ { key: '', value: '' } ]);
@@ -24,12 +27,12 @@ const SellerProductDetails = () => {
   });
 
   const { productId } = useParams();
-  const { handleGetProductById, handleAddProductVariant } = useProduct();
+  const { handleAddProductVariant, handleUpdateProductVariantStock } = useProduct();
 
-  async function fetchProductDetails() {
+  const fetchProductDetails = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await handleGetProductById(productId);
+      const data = await getProductById(productId);
       const prod = data?.product || data;
       setProduct(prod);
       // Initialize variants locally
@@ -41,17 +44,34 @@ const SellerProductDetails = () => {
     } finally {
       setLoading(false);
     }
-  }
+  }, [ productId ]);
 
   useEffect(() => {
     fetchProductDetails();
-  }, [ productId ]);
+  }, [ fetchProductDetails ]);
 
   // Handlers for modifying existing variant stock natively
   const handleStockChange = (index, newStock) => {
     const updatedVariants = [ ...localVariants ];
     updatedVariants[ index ] = { ...updatedVariants[ index ], stock: Number(newStock) };
     setLocalVariants(updatedVariants);
+  };
+
+  const saveStock = async index => {
+    const variant = localVariants[index];
+    setSavingStockIndex(index);
+    setStockMessage('');
+    try {
+      const result = await handleUpdateProductVariantStock(productId, variant._id, variant.stock);
+      const updatedVariants = [ ...localVariants ];
+      updatedVariants[index] = { ...variant, stock: result.stock };
+      setLocalVariants(updatedVariants);
+      setStockMessage('Stock saved.');
+    } catch (error) {
+      setStockMessage(error.response?.data?.message || 'Stock could not be saved.');
+    } finally {
+      setSavingStockIndex(null);
+    }
   };
 
   // Handlers for New Variant Form
@@ -78,10 +98,14 @@ const SellerProductDetails = () => {
         : undefined // price is optional
     };
 
-    setLocalVariants([ ...localVariants, variantToSave ]);
-    setIsAddingVariant(false);
-
-    await handleAddProductVariant(productId, variantToSave)
+    try {
+      await handleAddProductVariant(productId, variantToSave);
+      await fetchProductDetails();
+      setIsAddingVariant(false);
+    } catch (error) {
+      alert(error.response?.data?.message || 'Variant could not be saved.');
+      return;
+    }
 
     // Reset form
     // Note: should ideally revoke old object URLs as well to prevent memory leaks if it were a long-lived SPA
@@ -390,16 +414,21 @@ const SellerProductDetails = () => {
                     <div className="flex items-center gap-2">
                       <input
                         type="number"
-                        value={variant.stock || 0}
+                        value={variant.stock ?? 0}
+                        min="0"
                         onChange={(e) => handleStockChange(idx, e.target.value)}
+                        onBlur={() => saveStock(idx)}
                         className="w-20 bg-transparent border-b border-[#d0c5b5] py-1 text-right focus:outline-none focus:border-[#745a27] font-serif text-lg"
                       />
+                      {savingStockIndex === idx && <span className="text-xs">Saving</span>}
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
+
+          {stockMessage && <p className="mt-4 text-sm" role="status">{stockMessage}</p>}
 
         </section>
 

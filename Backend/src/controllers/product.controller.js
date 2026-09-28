@@ -130,3 +130,24 @@ export async function addProductVariant(req, res) {
     })
 
 }
+
+export async function updateProductVariantStock(req, res) {
+    const { productId, variantId } = req.params;
+    const stock = Number(req.body.stock);
+
+    const product = await productModel.findOne({ _id: productId, seller: req.user._id });
+    const variant = product?.variants.id(variantId);
+
+    if (!variant) {
+        return res.status(404).json({ message: "Product variant not found", success: false });
+    }
+
+    variant.stock = stock;
+    await product.save();
+
+    return res.status(200).json({
+        message: "Stock updated successfully",
+        success: true,
+        stock: variant.stock
+    });
+}

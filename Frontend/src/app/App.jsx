@@ -1,26 +1,26 @@
 import './App.css'
 import { RouterProvider } from 'react-router'
 import { routes } from './app.routes'
-import { useSelector } from 'react-redux'
-import { useAuth } from '../features/auth/hook/useAuth'
+import { useDispatch } from 'react-redux'
+import { getMe } from '../features/auth/service/auth.api'
+import { setLoading, setUser } from '../features/auth/state/auth.slice'
 import { useEffect } from 'react'
+import ThemeToggle from '../features/Shared/Components/ThemeToggle'
 
 
 function App() {
-
-
-  const { handleGetMe } = useAuth()
-
-  const user = useSelector(state => state.auth.user)
-
-  console.log(user)
+  const dispatch = useDispatch()
 
   useEffect(() => {
-    handleGetMe()
-  }, [])
+    getMe()
+      .then(data => dispatch(setUser(data.user)))
+      .catch(() => dispatch(setUser(null)))
+      .finally(() => dispatch(setLoading(false)))
+  }, [dispatch])
 
   return (
     <>
+      <ThemeToggle />
       <RouterProvider router={routes} />
     </>
   )

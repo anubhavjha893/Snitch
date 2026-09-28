@@ -1,0 +1,528 @@
+.snitch-home {
+    --ink: #171717;
+    --paper: #f7f7f3;
+    --acid: #d8e63b;
+    --red: #ef563b;
+    color: var(--ink);
+    background: var(--paper);
+    font-family: 'Manrope', sans-serif;
+}
+
+.snitch-home * {
+    box-sizing: border-box;
+}
+
+.snitch-promo {
+    min-height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 8px 16px;
+    color: var(--ink);
+    background: var(--acid);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.snitch-promo__divider {
+    color: var(--red);
+}
+
+.snitch-hero {
+    display: grid;
+    grid-template-columns: minmax(320px, .82fr) minmax(0, 1.18fr);
+    min-height: 490px;
+    max-width: 1600px;
+    margin: 0 auto;
+    background: var(--app-surface-low);
+}
+
+.snitch-hero__copy {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 60px clamp(28px, 7vw, 112px);
+}
+
+.snitch-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 18px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+}
+
+.snitch-eyebrow span {
+    width: 7px;
+    height: 7px;
+    background: var(--red);
+}
+
+.snitch-hero h1 {
+    margin: 0;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(64px, 8.2vw, 118px);
+    font-weight: 800;
+    line-height: .78;
+}
+
+.snitch-hero h1 span {
+    color: var(--red);
+}
+
+.snitch-hero__description {
+    max-width: 280px;
+    margin: 24px 0;
+    font-size: 12px;
+    line-height: 1.7;
+}
+
+.snitch-hero__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 30px;
+    min-height: 46px;
+    padding: 0 18px;
+    color: white;
+    background: var(--ink);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-decoration: none;
+    transition: background .2s ease, color .2s ease;
+}
+
+.snitch-hero__cta:hover {
+    color: var(--ink);
+    background: var(--acid);
+}
+
+.snitch-hero__cta span {
+    font-size: 18px;
+}
+
+.snitch-hero__index {
+    position: absolute;
+    right: 24px;
+    bottom: 20px;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.snitch-hero__image {
+    position: relative;
+    min-height: 490px;
+    overflow: hidden;
+    background: var(--app-surface-low);
+}
+
+.snitch-hero__image img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+}
+
+.snitch-hero__image-tag {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    padding: 10px 12px;
+    background: var(--acid);
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1.4;
+    letter-spacing: 1px;
+}
+
+.snitch-feed {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 74px clamp(20px, 4vw, 58px) 88px;
+    scroll-margin-top: 24px;
+}
+
+.snitch-feed__heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 28px;
+}
+
+.snitch-feed__heading .snitch-eyebrow {
+    margin-bottom: 8px;
+}
+
+.snitch-feed__heading h2 {
+    margin: 0;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: clamp(38px, 5vw, 62px);
+    font-weight: 800;
+    line-height: .95;
+}
+
+.snitch-feed__heading h2 span {
+    color: var(--red);
+}
+
+.snitch-feed__note {
+    margin: 0 0 4px;
+    color: var(--app-muted);
+    font-size: 11px;
+}
+
+.snitch-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    min-height: 56px;
+    padding: 10px 0;
+    border-top: 1px solid var(--app-border);
+    border-bottom: 1px solid var(--app-border);
+}
+
+.snitch-filters,
+.snitch-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.snitch-filters button {
+    min-height: 34px;
+    padding: 0 12px;
+    border: 1px solid transparent;
+    color: var(--app-muted);
+    background: transparent;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.snitch-filters button:hover,
+.snitch-filters button.is-active {
+    border-color: var(--ink);
+    color: var(--ink);
+}
+
+.snitch-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 170px;
+    border-bottom: 1px solid var(--app-border);
+}
+
+.snitch-search__icon {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.snitch-search input {
+    width: 100%;
+    height: 32px;
+    border: 0;
+    outline: 0;
+    color: var(--ink);
+    background: transparent;
+    font: inherit;
+    font-size: 10px;
+}
+
+.snitch-search input::placeholder {
+    color: var(--app-muted);
+}
+
+.snitch-sort {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.snitch-sort__label {
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.snitch-sort select {
+    max-width: 140px;
+    height: 34px;
+    border: 0;
+    color: var(--ink);
+    background: transparent;
+    font: inherit;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.snitch-results-count {
+    padding: 18px 0 12px;
+    color: var(--app-muted);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.snitch-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 34px 16px;
+}
+
+.snitch-product {
+    min-width: 0;
+    color: inherit;
+    text-decoration: none;
+}
+
+.snitch-product__image {
+    position: relative;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: var(--app-surface-low);
+}
+
+.snitch-product__image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    transition: transform .45s cubic-bezier(.2,.7,.2,1);
+}
+
+.snitch-product:hover .snitch-product__image img {
+    transform: scale(1.045);
+}
+
+.snitch-product__badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 7px 8px;
+    color: white;
+    background: var(--red);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: .5px;
+}
+
+.snitch-product__badge--lime {
+    color: var(--ink);
+    background: var(--acid);
+}
+
+.snitch-product__arrow {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    display: grid;
+    width: 34px;
+    aspect-ratio: 1;
+    place-items: center;
+    color: var(--ink);
+    background: white;
+    font-size: 17px;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.snitch-product:hover .snitch-product__arrow,
+.snitch-product:focus-visible .snitch-product__arrow {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.snitch-product__no-image {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+}
+
+.snitch-product__details {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 12px;
+}
+
+.snitch-product__fit {
+    margin: 0 0 4px;
+    color: var(--app-muted);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+}
+
+.snitch-product__details h3 {
+    margin: 0;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.5;
+}
+
+.snitch-product__price {
+    flex: 0 0 auto;
+    margin: 14px 0 0;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.snitch-empty {
+    padding: 64px 16px;
+    border-top: 1px solid var(--app-border);
+    text-align: center;
+}
+
+.snitch-empty h3 {
+    margin: 0;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+}
+
+.snitch-empty p {
+    color: var(--app-muted);
+    font-size: 12px;
+}
+
+.snitch-empty button {
+    min-height: 42px;
+    margin-top: 10px;
+    padding: 0 18px;
+    border: 0;
+    color: white;
+    background: var(--ink);
+    font: inherit;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    cursor: pointer;
+}
+
+.snitch-footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 24px clamp(20px, 4vw, 58px);
+    border-top: 1px solid var(--app-border);
+    font-size: 8px;
+    font-weight: 800;
+    letter-spacing: 1px;
+}
+
+.snitch-footer span:first-child {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+}
+
+@media (max-width: 900px) {
+    .snitch-hero {
+        grid-template-columns: minmax(280px, .9fr) minmax(0, 1.1fr);
+        min-height: 420px;
+    }
+
+    .snitch-hero__image {
+        min-height: 420px;
+    }
+
+    .snitch-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 640px) {
+    .snitch-promo {
+        font-size: 8px;
+    }
+
+    .snitch-hero {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
+
+    .snitch-hero__copy {
+        min-height: 350px;
+        padding: 42px 24px 54px;
+    }
+
+    .snitch-hero h1 {
+        font-size: clamp(64px, 19vw, 94px);
+    }
+
+    .snitch-hero__image {
+        min-height: 0;
+        aspect-ratio: 1.15 / 1;
+    }
+
+    .snitch-feed {
+        padding: 52px 16px 60px;
+    }
+
+    .snitch-feed__heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 18px;
+    }
+
+    .snitch-controls {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .snitch-filters {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .snitch-filters button {
+        flex: 0 0 auto;
+        padding: 0 9px;
+    }
+
+    .snitch-tools {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .snitch-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 26px 10px;
+    }
+
+    .snitch-product__details {
+        flex-direction: column;
+        gap: 0;
+        padding-top: 9px;
+    }
+
+    .snitch-product__price {
+        margin-top: 6px;
+    }
+
+    .snitch-footer {
+        flex-wrap: wrap;
+    }
+}

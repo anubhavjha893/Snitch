@@ -17,3 +17,9 @@ export const createProductValidator = [
     body("priceCurrency").notEmpty().withMessage("Price currency is required"),
     validateRequest
 ]
+
+export const validateVariantStock = [
+    body("stock")
+        .isInt({ min: 0 }).withMessage("Stock must be a non-negative integer"),
+    validateRequest
+]

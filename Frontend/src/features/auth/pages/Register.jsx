@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { useAuth } from "../hook/useAuth";
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import ContinueWithGoogle from '../components/ContinueWithGoogle';
 
 const Register = () => {
     const { handleRegister } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [formData, setFormData] = useState({
         fullName: '',
@@ -14,6 +15,8 @@ const Register = () => {
         password: '',
         isSeller: false
     });
+    const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -22,14 +25,22 @@ const Register = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        await handleRegister({
-            email: formData.email,
-            contact: formData.contactNumber,
-            password: formData.password,
-            isSeller: formData.isSeller,
-            fullname: formData.fullName
-        });
-        navigate("/");
+        setError('');
+        setIsSubmitting(true);
+        try {
+            await handleRegister({
+                email: formData.email,
+                contact: formData.contactNumber,
+                password: formData.password,
+                isSeller: formData.isSeller,
+                fullname: formData.fullName
+            });
+            navigate(location.state?.redirectTo || "/", { state: location.state?.checkout ? { checkout: true } : undefined });
+        } catch (requestError) {
+            setError(requestError.response?.data?.errors?.[0]?.msg || requestError.response?.data?.message || 'Sign-up failed. Check your details and try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const inputStyle = {
@@ -122,6 +133,7 @@ const Register = () => {
 
                         {/* Form */}
                         <form onSubmit={handleSubmit} className="flex flex-col gap-9">
+                            {error && <p role="alert" className="text-sm" style={{ color: 'var(--app-highlight)' }}>{error}</p>}
 
                             {/* Full Name */}
                             <div className="flex flex-col gap-2">
@@ -259,6 +271,7 @@ const Register = () => {
                             {/* Sign Up Button */}
                             <button
                                 type="submit"
+                                disabled={isSubmitting}
                                 className="w-full py-4 text-[11px] uppercase tracking-[0.25em] font-medium transition-all duration-300 mt-2"
                                 style={{ backgroundColor: '#1b1c1a', color: '#fbf9f6', fontFamily: "'Inter', sans-serif" }}
                                 onMouseEnter={e => {
@@ -270,7 +283,7 @@ const Register = () => {
                                     e.currentTarget.style.color = '#fbf9f6';
                                 }}
                             >
-                                Sign Up
+                                {isSubmitting ? 'Creating account...' : 'Sign Up'}
                             </button>
 
                             {/* Divider */}

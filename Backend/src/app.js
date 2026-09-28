@@ -11,12 +11,16 @@ import { config } from "./config/config.js";
 
 const app = express();
 
+app.set("trust proxy", 1);
+
+const allowedOrigins = [ "http://localhost:5173", config.FRONTEND_URL ].filter(Boolean);
+
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors({
-    origin: "http://localhost:5173",
+    origin: allowedOrigins,
     methods: [ "GET", "POST", "PUT", "DELETE" ],
     credentials: true
 }))

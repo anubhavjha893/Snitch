@@ -37,3 +37,13 @@ export const validateLoginUser = [
         .notEmpty().withMessage("Password is required"),
     validateRequest
 ]
+
+export const validateUpdateProfile = [
+    body("fullname")
+        .trim()
+        .isLength({ min: 3, max: 80 }).withMessage("Full name must be between 3 and 80 characters"),
+    body("contact")
+        .trim()
+        .matches(/^\d{10}$/).withMessage("Contact must be a 10-digit number"),
+    validateRequest
+]

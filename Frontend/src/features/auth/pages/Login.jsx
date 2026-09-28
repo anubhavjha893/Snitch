@@ -1,16 +1,19 @@
 import React, { useState } from 'react';
 import { useAuth } from "../hook/useAuth";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 import ContinueWithGoogle from '../components/ContinueWithGoogle';
 
 const Login = () => {
     const { handleLogin } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [ formData, setFormData ] = useState({
         email: '',
         password: ''
     });
+    const [ error, setError ] = useState('');
+    const [ isSubmitting, setIsSubmitting ] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -19,15 +22,16 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError('');
+        setIsSubmitting(true);
         try {
             const user = await handleLogin({ email: formData.email, password: formData.password });
-            if (user.role == "buyer") {
-                navigate("/");
-            } else if (user.role == "seller") {
-                navigate("/seller/dashboard");
-            }
+            const destination = location.state?.redirectTo || (user.role === "seller" ? "/seller/dashboard" : "/");
+            navigate(destination, { state: location.state?.checkout ? { checkout: true } : undefined });
         } catch (error) {
-            console.error("Login failed", error);
+            setError(error.response?.data?.message || 'Sign-in failed. Check your details and try again.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -115,6 +119,7 @@ const Login = () => {
 
                         {/* Form */}
                         <form onSubmit={handleSubmit} className="flex flex-col gap-10">
+                            {error && <p role="alert" className="text-sm" style={{ color: 'var(--app-highlight)' }}>{error}</p>}
 
                             {/* Email */}
                             <div className="flex flex-col gap-2">
@@ -186,6 +191,7 @@ const Login = () => {
                             {/* Sign In Button */}
                             <button
                                 type="submit"
+                                disabled={isSubmitting}
                                 className="w-full py-4 text-[11px] uppercase tracking-[0.25em] font-medium transition-all duration-300 mt-2"
                                 style={{
                                     backgroundColor: '#1b1c1a',
@@ -201,7 +207,7 @@ const Login = () => {
                                     e.currentTarget.style.color = '#fbf9f6';
                                 }}
                             >
-                                Sign In
+                                {isSubmitting ? 'Signing in...' : 'Sign In'}
                             </button>
 
                             {/* Divider */}

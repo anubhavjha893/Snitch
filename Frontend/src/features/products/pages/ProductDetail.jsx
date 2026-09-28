@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, Link, useNavigate } from 'react-router';
+import React, { useEffect, useEffectEvent, useState, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router';
+import { useSelector } from 'react-redux';
 import { useProduct } from '../hooks/useProduct';
 import { useCart } from '../../cart/hook/useCart';
 
@@ -8,32 +9,32 @@ const ProductDetail = () => {
     const [ product, setProduct ] = useState(null);
     const [ selectedImage, setSelectedImage ] = useState(0);
     const [ selectedAttributes, setSelectedAttributes ] = useState({});
+    const [ actionMessage, setActionMessage ] = useState('');
+    const [ loadFailed, setLoadFailed ] = useState(false);
     const navigate = useNavigate();
+    const user = useSelector(state => state.auth.user);
     const { handleGetProductById } = useProduct();
     const { handleAddItem } = useCart()
 
 
 
 
-    async function fetchProductDetails() {
+    const fetchProductDetails = useEffectEvent(async () => {
         try {
             const data = await handleGetProductById(productId);
-            // Handle both cases depending on how API is structured
-            setProduct(data?.product || data);
+            const loadedProduct = data?.product || data;
+            setProduct(loadedProduct);
+            setSelectedAttributes(loadedProduct?.variants?.[0]?.attributes || {});
+            setLoadFailed(false);
         } catch (error) {
             console.error("Failed to fetch product details", error);
+            setLoadFailed(true);
         }
-    }
+    });
 
     useEffect(() => {
         fetchProductDetails();
     }, [ productId ]);
-
-    useEffect(() => {
-        if (product?.variants?.length > 0) {
-            setSelectedAttributes(product.variants[ 0 ].attributes || {});
-        }
-    }, [ product ]);
 
     const activeVariant = useMemo(() => {
         if (!product?.variants || product.variants.length === 0) return null;
@@ -48,8 +49,6 @@ const ProductDetail = () => {
         });
     }, [ product, selectedAttributes ]);
 
-
-    console.log({ product, activeVariant })
 
     const availableAttributes = useMemo(() => {
         if (!product?.variants) return {};
@@ -68,10 +67,6 @@ const ProductDetail = () => {
         return attrs;
     }, [ product ]);
 
-    useEffect(() => {
-        setSelectedImage(0);
-    }, [ activeVariant ]);
-
     const handleAttributeChange = (attrName, value) => {
         const newAttrs = { ...selectedAttributes, [ attrName ]: value };
 
@@ -84,6 +79,7 @@ const ProductDetail = () => {
 
         if (exactMatch) {
             setSelectedAttributes(exactMatch.attributes);
+            setSelectedImage(0);
         } else {
             // Find any variant that has this newly selected attribute to fallback nicely
             const fallbackVariant = product.variants.find(v => v.attributes && v.attributes[ attrName ] === value);
@@ -98,14 +94,45 @@ const ProductDetail = () => {
     if (!product) {
         return (
             <div className="min-h-screen flex items-center justify-center selection:bg-[#C9A96E]/30" style={{ backgroundColor: '#fbf9f6' }}>
-                <p style={{ fontFamily: "'Inter', sans-serif", color: '#B5ADA3' }} className="text-[10px] uppercase tracking-[0.2em] font-medium animate-pulse">
-                    Retrieving piece...
+                <p style={{ fontFamily: "'Inter', sans-serif", color: '#B5ADA3' }} className="text-[10px] uppercase tracking-[0.2em] font-medium">
+                    {loadFailed ? 'Product could not be found.' : 'Retrieving piece...'}
                 </p>
             </div>
         );
     }
 
-    console.log(product)
+    const handlePurchaseAction = async (checkout = false) => {
+        if (!user) {
+            navigate('/login', {
+                state: {
+                    redirectTo: `/product/${productId}`,
+                    checkout
+                }
+            });
+            return;
+        }
+
+        if (!activeVariant) {
+            setActionMessage('Select an available size before continuing.');
+            return;
+        }
+
+        if (activeVariant.stock <= 0) {
+            setActionMessage('This size is currently out of stock.');
+            return;
+        }
+
+        try {
+            await handleAddItem({ productId: product._id, variantId: activeVariant._id });
+            if (checkout) {
+                navigate('/cart', { state: { checkout: true } });
+            } else {
+                setActionMessage('Added to your cart.');
+            }
+        } catch (error) {
+            setActionMessage(error.response?.data?.message || 'Could not add this item. Please try again.');
+        }
+    };
 
     // Fallbacks
     const displayImages = (activeVariant?.images && activeVariant.images.length > 0)
@@ -253,7 +280,9 @@ const ProductDetail = () => {
 
                             {/* Actions */}
                             <div className="flex flex-col gap-4 mt-auto">
+                                {actionMessage && <p role="status" className="text-sm" style={{ color: '#7A6E63' }}>{actionMessage}</p>}
                                 <button
+                                    disabled={!activeVariant || activeVariant.stock <= 0}
                                     className="w-full py-4 text-[11px] uppercase tracking-[0.25em] font-medium transition-all duration-300"
                                     style={{
                                         backgroundColor: '#1b1c1a',
@@ -268,17 +297,13 @@ const ProductDetail = () => {
                                         e.currentTarget.style.backgroundColor = '#1b1c1a';
                                         e.currentTarget.style.color = '#fbf9f6';
                                     }}
-                                    onClick={() => {
-                                        handleAddItem({
-                                            productId: product._id,
-                                            variantId: activeVariant._id
-                                        })
-                                    }}
+                                    onClick={() => handlePurchaseAction()}
                                 >
                                     Add to Cart
                                 </button>
 
                                 <button
+                                    disabled={!activeVariant || activeVariant.stock <= 0}
                                     className="w-full py-4 text-[11px] uppercase tracking-[0.25em] font-medium transition-all duration-300 border"
                                     style={{
                                         backgroundColor: 'transparent',
@@ -292,6 +317,7 @@ const ProductDetail = () => {
                                     onMouseLeave={e => {
                                         e.currentTarget.style.borderColor = '#d0c5b5';
                                     }}
+                                    onClick={() => handlePurchaseAction(true)}
                                 >
                                     Buy Now
                                 </button>

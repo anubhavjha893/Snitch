@@ -27,6 +27,10 @@ const paymentSchema = new mongoose.Schema({
             title: String,
             productId: mongoose.Schema.Types.ObjectId,
             variantId: mongoose.Schema.Types.ObjectId,
+            attributes: {
+                type: Map,
+                of: String
+            },
             quantity: Number,
             images: [ { url: String } ],
             description: String,

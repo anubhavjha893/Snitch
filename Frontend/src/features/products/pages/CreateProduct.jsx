@@ -18,6 +18,7 @@ const CreateProduct = () => {
     const [images, setImages] = useState([]);
     const [isDragging, setIsDragging] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState('');
     const fileInputRef = useRef(null);
 
     const handleChange = (e) => {
@@ -25,13 +26,13 @@ const CreateProduct = () => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const addFiles = (files) => {
+    const addFiles = useCallback((files) => {
         const remaining = MAX_IMAGES - images.length;
         if (remaining <= 0) return;
         const toAdd = Array.from(files).slice(0, remaining);
         const newImages = toAdd.map(file => ({ file, preview: URL.createObjectURL(file) }));
         setImages(prev => [...prev, ...newImages]);
-    };
+    }, [ images.length ]);
 
     const handleFileChange = (e) => {
         addFiles(e.target.files);
@@ -42,7 +43,7 @@ const CreateProduct = () => {
         e.preventDefault();
         setIsDragging(false);
         if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
-    }, [images]);
+    }, [ addFiles ]);
 
     const handleDragOver = (e) => { e.preventDefault(); setIsDragging(true); };
     const handleDragLeave = () => setIsDragging(false);
@@ -59,6 +60,7 @@ const CreateProduct = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSubmitting(true);
+        setSubmitError('');
         try {
             const data = new FormData();
             data.append('title', formData.title);
@@ -69,7 +71,7 @@ const CreateProduct = () => {
             await handleCreateProduct(data);
             navigate('/');
         } catch (err) {
-            console.error('Failed to create product', err);
+            setSubmitError(err.response?.data?.errors?.[0]?.msg || err.response?.data?.message || 'Listing could not be published. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -315,6 +317,7 @@ const CreateProduct = () => {
 
                         {/* ── Submit Button ── */}
                         <div className="mt-16 lg:mt-20">
+                            {submitError && <p className="mb-4 text-sm" role="alert" style={{ color: 'var(--app-highlight)' }}>{submitError}</p>}
                             <button
                                 type="submit"
                                 disabled={isSubmitting}

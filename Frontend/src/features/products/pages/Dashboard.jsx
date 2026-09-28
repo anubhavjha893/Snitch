@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useEffectEvent } from 'react';
 import { useProduct } from '../hooks/useProduct';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
@@ -8,8 +8,10 @@ const Dashboard = () => {
     const sellerProducts = useSelector(state => state.product.sellerProducts);
     const navigate = useNavigate();
 
+    const loadSellerProducts = useEffectEvent(() => handleGetSellerProduct());
+
     useEffect(() => {
-        handleGetSellerProduct();
+        loadSellerProducts();
     }, []);
 
     return (

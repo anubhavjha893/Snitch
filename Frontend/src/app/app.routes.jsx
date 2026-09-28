@@ -9,7 +9,8 @@ import ProductDetail from "../features/products/pages/ProductDetail";
 import SellerProductDetails from "../features/products/pages/SellerProductDetails";
 import Cart from "../features/cart/pages/Cart";
 import AppLayout from "./Applayout";
-import OrderSuccess from "../features/cart/pages/OrderSuccess";
+import OrderSuccess from "../features/cart/pages/OrderReceipt";
+import Account from "../features/auth/pages/Account";
 
 export const routes = createBrowserRouter([
 
@@ -37,8 +38,12 @@ export const routes = createBrowserRouter([
                 element: <Protected> <Cart /></Protected>
             },
             {
+                path: "/account",
+                element: <Protected><Account /></Protected>
+            },
+            {
                 path: "/order-success",
-                element: <OrderSuccess />
+                element: <Protected><OrderSuccess /></Protected>
             },
             {
                 path: "/seller",

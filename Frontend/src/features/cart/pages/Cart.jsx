@@ -1,51 +1,45 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useCart } from '../hook/useCart'
-import { Link, useNavigate } from 'react-router'
+import { Link, useLocation, useNavigate } from 'react-router'
 import { useRazorpay } from "react-razorpay";
 
 /* ─── Inline styles & tokens matching the "Avenue Montaigne" design system ─── */
 const tokens = {
-    surface: '#fbf9f6',
-    surfaceLow: '#f5f3f0',
-    surfaceLowest: '#ffffff',
-    surfaceHigh: '#eae8e5',
-    surfaceHighest: '#e4e2df',
-    onSurface: '#1b1c1a',
-    onSurfaceVariant: '#4d463a',
-    secondary: '#7A6E63',
-    muted: '#B5ADA3',
-    primary: '#C9A96E',
-    primaryDark: '#745a27',
-    outlineVariant: '#d0c5b5',
-    outline: '#7f7668',
+    surface: 'var(--app-background)',
+    surfaceLow: 'var(--app-surface-low)',
+    surfaceLowest: 'var(--app-surface)',
+    surfaceHigh: 'var(--app-surface-low)',
+    surfaceHighest: 'var(--app-border)',
+    onSurface: 'var(--app-text)',
+    onSurfaceVariant: 'var(--app-muted)',
+    secondary: 'var(--app-muted)',
+    muted: 'var(--app-muted)',
+    primary: 'var(--app-accent)',
+    primaryDark: 'var(--app-button)',
+    outlineVariant: 'var(--app-border)',
+    outline: 'var(--app-muted)',
 }
 
 const Cart = () => {
     const cart = useSelector(state => state.cart)
-    const { handleGetCart, handleIncrementCartItem, handleCreateCartOrder, handleVerifyCartOrder } = useCart()
+    const { handleGetCart, handleIncrementCartItem, handleDecrementCartItem, handleRemoveCartItem, handleCreateCartOrder, handleVerifyCartOrder } = useCart()
     const navigate = useNavigate()
-    const { error, isLoading, Razorpay } = useRazorpay();
-    const user = useSelector(state => state.user)
-
-    /* Local quantity state — key: cartItem._id, value: number */
-    const [ quantities, setQuantities ] = useState({})
+    const location = useLocation()
+    const { isLoading: razorpayLoading, Razorpay } = useRazorpay();
+    const user = useSelector(state => state.auth.user)
+    const [ cartLoading, setCartLoading ] = useState(true)
+    const [ checkoutError, setCheckoutError ] = useState('')
+    const autoCheckoutStarted = useRef(false)
 
     useEffect(() => {
-        handleGetCart()
-    }, [])
-
-
-    const changeQty = (id, delta) => {
-        setQuantities(prev => ({
-            ...prev,
-            [ id ]: Math.max(1, (prev[ id ] ?? 1) + delta),
-        }))
-    }
+        handleGetCart().finally(() => setCartLoading(false))
+    }, [ handleGetCart ])
     /* ─── Helpers ─── */
     const getVariantDetails = (product, variantId) => {
         if (!product?.variants || !variantId) return null
-        return product.variants
+        if (!Array.isArray(product.variants)) return product.variants._id === variantId ? product.variants : null
+        return product.variants.find(variant => variant._id === variantId) || null
     }
 
     const getDisplayImage = (product, variant) => {
@@ -58,38 +52,50 @@ const Cart = () => {
         `${currency} ${Number(amount).toLocaleString('en-IN')}`
 
 
-    async function handleCheckout() {
-        const order = await handleCreateCartOrder()
-        console.log(order)
+    const handleCheckout = useCallback(async () => {
+        try {
+            const { order, keyId } = await handleCreateCartOrder()
+            const razorpayInstance = new Razorpay({
+                key: keyId,
+                amount: order.amount,
+                currency: order.currency,
+                name: "SNITCH",
+                description: "Your SNITCH order",
+                order_id: order.id,
+                handler: async response => {
+                    const isValid = await handleVerifyCartOrder(response)
+                    if (isValid) {
+                        await handleGetCart()
+                        navigate(`/order-success?order_id=${response.razorpay_order_id}`)
+                    }
+                },
+                prefill: {
+                    name: user?.fullname,
+                    email: user?.email,
+                    contact: user?.contact,
+                },
+                theme: { color: tokens.primaryDark },
+            })
+            razorpayInstance.on('payment.failed', response => {
+                setCheckoutError(response.error?.description || 'Payment could not be completed. Please try again.')
+            })
+            razorpayInstance.open()
+        } catch (requestError) {
+            setCheckoutError(requestError.response?.data?.message || 'Unable to start checkout. Please try again.')
+        }
+    }, [ handleCreateCartOrder, handleGetCart, handleVerifyCartOrder, navigate, Razorpay, user ])
 
+    const startCheckout = useEffectEvent(() => handleCheckout())
 
-        const options = {
-            key: "rzp_test_ShNSkpxt3emQVJ",
-            amount: order.amount, // Amount in paise
-            currency: order.currency,
-            name: "Snitch",
-            description: "Test Transaction",
-            order_id: order.id, // Generate order_id on server
-            handler: async (response) => {
+    useEffect(() => {
+        if (location.state?.checkout && !cartLoading && !razorpayLoading && Razorpay && cart.items.length && !autoCheckoutStarted.current) {
+            autoCheckoutStarted.current = true
+            startCheckout()
+        }
+    }, [ location.state, cartLoading, razorpayLoading, Razorpay, cart.items.length ])
 
-                const isValid = await handleVerifyCartOrder(response)
-
-                if (isValid) {
-                    navigate(`/order-success?order_id=${response?.razorpay_order_id}`)
-                }
-            },
-            prefill: {
-                name: user?.fullname,
-                email: user?.email,
-                contact: user?.contact,
-            },
-            theme: {
-                color: tokens.primary,
-            },
-        };
-
-        const razorpayInstance = new Razorpay(options);
-        razorpayInstance.open();
+    if (cartLoading) {
+        return <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: tokens.surface, color: tokens.onSurface }}>Loading your cart...</div>
     }
 
     /* ─── Empty state ─── */
@@ -104,27 +110,6 @@ const Cart = () => {
                     className="min-h-screen flex flex-col"
                     style={{ backgroundColor: tokens.surface, fontFamily: "'Inter', sans-serif" }}
                 >
-                    {/* Nav */}
-                    <nav
-                        className="px-8 lg:px-16 xl:px-24 pt-10 pb-6 flex items-center justify-between"
-                        style={{ borderBottom: `1px solid ${tokens.surfaceHighest}` }}
-                    >
-                        <Link
-                            to="/"
-                            className="text-sm font-medium tracking-[0.35em] uppercase hover:opacity-80 transition-opacity"
-                            style={{ fontFamily: "'Cormorant Garamond', serif", color: tokens.primary }}
-                        >
-                            Snitch.
-                        </Link>
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="text-[10px] uppercase tracking-[0.22em] font-medium transition-colors hover:opacity-70"
-                            style={{ color: tokens.secondary }}
-                        >
-                            Return to Archive
-                        </button>
-                    </nav>
-
                     <div className="flex-1 flex flex-col items-center justify-center gap-6 pb-24 px-8">
                         <p
                             className="text-5xl md:text-6xl font-light leading-tight"
@@ -210,8 +195,8 @@ const Cart = () => {
                                     const { product, variant: variantId, price, product: { _id } } = item
                                     const variantDetail = getVariantDetails(product, variantId)
                                     const imageUrl = getDisplayImage(product, variantDetail)
-                                    const displayPrice = price ?? variantDetail?.price ?? product?.price
-                                    const qty = quantities[ _id ] ?? item.quantity ?? 1
+                                    const displayPrice = variantDetail?.price ?? price ?? product?.price
+                                    const qty = item.quantity ?? 1
                                     const attributes = variantDetail?.attributes ?? {}
                                     const stock = variantDetail?.stock
                                     const variantPrice = variantDetail?.price
@@ -299,7 +284,7 @@ const Cart = () => {
                                                         </p>
                                                     )}
                                                     {
-                                                        displayPrice.amount !== variantPrice.amount && (
+                                                        displayPrice?.amount !== variantPrice?.amount && variantPrice && (
                                                             <>
                                                                 {displayPrice.amount > variantPrice.amount
                                                                     ? <p className="text-[10px] uppercase tracking-[0.15em] mb-4 text-green-800 font-bold" > you will get this at {formatCurrency(variantPrice.amount, variantPrice.currency)} save {Math.abs(variantPrice.amount - displayPrice.amount)}.  </p>
@@ -319,7 +304,7 @@ const Cart = () => {
                                                     >
                                                         <button
                                                             id={`qty-dec-${_id}`}
-                                                            onClick={() => changeQty(_id, -1)}
+                                                            onClick={() => handleDecrementCartItem({ productId: _id, variantId })}
                                                             className="w-9 h-9 flex items-center justify-center text-sm font-light transition-colors hover:opacity-60"
                                                             style={{ color: tokens.onSurface, borderRight: `1px solid ${tokens.outlineVariant}` }}
                                                             aria-label="Decrease quantity"
@@ -335,6 +320,7 @@ const Cart = () => {
                                                         <button
                                                             id={`qty-inc-${_id}`}
                                                             onClick={() => handleIncrementCartItem({ productId: _id, variantId })}
+                                                            disabled={stock !== undefined && qty >= stock}
                                                             className="w-9 h-9 flex items-center justify-center text-sm font-light transition-colors hover:opacity-60"
                                                             style={{ color: tokens.onSurface, borderLeft: `1px solid ${tokens.outlineVariant}` }}
                                                             aria-label="Increase quantity"
@@ -346,6 +332,7 @@ const Cart = () => {
                                                     {/* Remove */}
                                                     <button
                                                         id={`remove-${_id}`}
+                                                        onClick={() => handleRemoveCartItem({ productId: _id, variantId })}
                                                         className="text-[10px] uppercase tracking-[0.22em] font-medium transition-all duration-200 hover:underline hover:opacity-70"
                                                         style={{ color: tokens.muted }}
                                                     >
@@ -468,9 +455,12 @@ const Cart = () => {
                                     </span>
                                 </div>
 
+                                {checkoutError && <p className="mb-4 text-sm" role="alert" style={{ color: 'var(--app-highlight)' }}>{checkoutError}</p>}
+
                                 {/* Primary CTA */}
                                 <button
                                     id="proceed-checkout"
+                                    disabled={razorpayLoading || !Razorpay}
                                     className="w-full py-4 mb-3 text-[11px] uppercase tracking-[0.25em] font-medium transition-all duration-300"
                                     style={{
                                         backgroundColor: tokens.onSurface,
