@@ -1,25 +1,44 @@
 import React, { useEffect, useEffectEvent, useState, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router';
-import { useSelector } from 'react-redux';
+import { useParams, useNavigate, Link } from 'react-router';
+import { useDispatch, useSelector } from 'react-redux';
 import { useProduct } from '../hooks/useProduct';
 import { useCart } from '../../cart/hook/useCart';
+import WishlistButton from '../../wishlist/components/WishlistButton';
+import Reviews from '../components/Reviews';
+import Stars from '../components/Stars';
+import { getAllProducts } from '../service/product.api';
+import { formatPrice } from '../../Shared/utils/format';
+import { useToast } from '../../Shared/hooks/useToast';
+import { usePageMeta } from '../../Shared/hooks/usePageMeta';
+import { addGuestItem } from '../../guest/guestCart.slice';
+import { SkeletonProduct } from '../../Shared/Components/Skeleton';
+import SizeGuide from '../components/SizeGuide';
+import RecentlyViewed from '../components/RecentlyViewed';
+import { recordViewed } from '../../Shared/utils/recentlyViewed';
 
 const ProductDetail = () => {
     const { productId } = useParams();
     const [ product, setProduct ] = useState(null);
     const [ selectedImage, setSelectedImage ] = useState(0);
     const [ selectedAttributes, setSelectedAttributes ] = useState({});
-    const [ actionMessage, setActionMessage ] = useState('');
+    const [ showSizeGuide, setShowSizeGuide ] = useState(false);
+    const { toast } = useToast();
+    const dispatch = useDispatch();
     const [ loadFailed, setLoadFailed ] = useState(false);
     const navigate = useNavigate();
     const user = useSelector(state => state.auth.user);
     const { handleGetProductById } = useProduct();
     const { handleAddItem } = useCart()
+    const [ ratingSummary, setRatingSummary ] = useState({ count: 0, average: 0 });
+    const [ allProducts, setAllProducts ] = useState([]);
+    const [ shareMessage, setShareMessage ] = useState('');
 
 
 
 
     const fetchProductDetails = useEffectEvent(async () => {
+        setProduct(null);
+        setSelectedImage(0);
         try {
             const data = await handleGetProductById(productId);
             const loadedProduct = data?.product || data;
@@ -35,6 +54,33 @@ const ProductDetail = () => {
     useEffect(() => {
         fetchProductDetails();
     }, [ productId ]);
+
+    usePageMeta({
+        title: product?.title,
+        description: product?.description?.slice(0, 155),
+        image: product?.images?.[0]?.url,
+    });
+
+    useEffect(() => {
+        if (product) recordViewed(product);
+    }, [ product ]);
+
+    useEffect(() => {
+        getAllProducts().then(data => setAllProducts(data.products)).catch(() => { });
+    }, []);
+
+    const handleShare = async () => {
+        const url = window.location.href;
+        try {
+            if (navigator.share) {
+                await navigator.share({ title: product.title, url });
+            } else {
+                await navigator.clipboard.writeText(url);
+                setShareMessage('Link copied.');
+                setTimeout(() => setShareMessage(''), 2000);
+            }
+        } catch { /* share dismissed */ }
+    };
 
     const activeVariant = useMemo(() => {
         if (!product?.variants || product.variants.length === 0) return null;
@@ -93,44 +139,57 @@ const ProductDetail = () => {
 
     if (!product) {
         return (
-            <div className="min-h-screen flex items-center justify-center selection:bg-[#C9A96E]/30" style={{ backgroundColor: '#fbf9f6' }}>
-                <p style={{ fontFamily: "'Inter', sans-serif", color: '#B5ADA3' }} className="text-[10px] uppercase tracking-[0.2em] font-medium">
-                    {loadFailed ? 'Product could not be found.' : 'Retrieving piece...'}
-                </p>
+            <div className="min-h-[60vh] max-w-7xl mx-auto px-5 sm:px-8 lg:px-16 xl:px-24 pt-12">
+                {loadFailed ? (
+                    <p className="text-[10px] uppercase tracking-[0.2em] font-medium" style={{ color: '#B5ADA3' }}>Product could not be found.</p>
+                ) : (
+                    <SkeletonProduct />
+                )}
             </div>
         );
     }
 
     const handlePurchaseAction = async (checkout = false) => {
-        if (!user) {
-            navigate('/login', {
-                state: {
-                    redirectTo: `/product/${productId}`,
-                    checkout
-                }
-            });
-            return;
-        }
-
         if (!activeVariant) {
-            setActionMessage('Select an available size before continuing.');
+            toast('Select an available size before continuing.', 'error');
             return;
         }
 
         if (activeVariant.stock <= 0) {
-            setActionMessage('This size is currently out of stock.');
+            toast('This size is currently out of stock.', 'error');
+            return;
+        }
+
+        if (!user) {
+            // guests keep a cart on this device; it moves to their account when they sign in
+            dispatch(addGuestItem({
+                productId: product._id,
+                variantId: activeVariant._id,
+                stock: activeVariant.stock,
+                title: product.title,
+                image: (activeVariant.images?.[0] || product.images?.[0])?.url || '',
+                price: (activeVariant.price?.amount ?? product.price?.amount),
+                currency: product.price?.currency,
+                attributes: activeVariant.attributes || {},
+            }));
+
+            if (checkout) {
+                navigate('/login', { state: { redirectTo: '/checkout' } });
+            } else {
+                toast('Added to your cart.', 'success');
+            }
             return;
         }
 
         try {
             await handleAddItem({ productId: product._id, variantId: activeVariant._id });
             if (checkout) {
-                navigate('/cart', { state: { checkout: true } });
+                navigate('/checkout');
             } else {
-                setActionMessage('Added to your cart.');
+                toast('Added to your cart.', 'success');
             }
         } catch (error) {
-            setActionMessage(error.response?.data?.message || 'Could not add this item. Please try again.');
+            toast(error.response?.data?.message || 'Could not add this item. Please try again.', 'error');
         }
     };
 
@@ -138,6 +197,8 @@ const ProductDetail = () => {
     const displayImages = (activeVariant?.images && activeVariant.images.length > 0)
         ? activeVariant.images
         : (product.images && product.images.length > 0 ? product.images : [ { url: '/snitch_editorial_warm.png' } ]);
+
+    const related = allProducts.filter(item => item._id !== product._id).slice(0, 4);
 
     const displayPrice = activeVariant?.price?.amount
         ? activeVariant.price
@@ -156,7 +217,7 @@ const ProductDetail = () => {
                 style={{ backgroundColor: '#fbf9f6', fontFamily: "'Inter', sans-serif" }}
             >
 
-                <div className="max-w-7xl mx-auto px-8 lg:px-16 xl:px-24 pt-12 lg:pt-20">
+                <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-16 xl:px-24 pt-8 lg:pt-20">
                     <div className="flex flex-col lg:flex-row gap-12 lg:gap-24 items-start">
 
                         {/* ── LEFT: Image Gallery ── */}
@@ -174,7 +235,7 @@ const ProductDetail = () => {
                                         >
                                             <img
 
-                                                src={img.url} alt={`View ${idx + 1}`} className="w-full h-full object-cover" />
+                                                src={img.url} alt={`View ${idx + 1}`} className="w-full h-full object-cover object-top" />
                                         </button>
                                     ))}
                                 </div>
@@ -185,7 +246,7 @@ const ProductDetail = () => {
                                 <img
                                     src={displayImages[ selectedImage ]?.url || displayImages[ 0 ].url}
                                     alt={product.title}
-                                    className="w-full h-full object-cover transition-opacity duration-500"
+                                    className="w-full h-full object-cover object-top transition-opacity duration-500"
 
                                 />
                                 {displayImages.length > 1 && (
@@ -219,11 +280,17 @@ const ProductDetail = () => {
                         <div className="w-full lg:w-[30%] lg:sticky lg:top-24 flex flex-col pt-4">
 
                             <h1
-                                className="text-4xl md:text-5xl lg:text-6xl font-light leading-[1.05] mb-6"
+                                className="text-4xl md:text-5xl lg:text-6xl font-light leading-[1.05] mb-4 break-words"
                                 style={{ fontFamily: "'Cormorant Garamond', serif", color: '#1b1c1a' }}
                             >
                                 {product.title}
                             </h1>
+
+                            {ratingSummary.count > 0 && (
+                                <a href="#reviews" className="flex items-center gap-2 mb-4 text-xs" style={{ color: '#7A6E63' }}>
+                                    <Stars value={ratingSummary.average} /> {ratingSummary.average} ({ratingSummary.count})
+                                </a>
+                            )}
 
                             <div className="mb-8">
                                 <span
@@ -239,9 +306,14 @@ const ProductDetail = () => {
                             {/* Options/Variants */}
                             {Object.entries(availableAttributes).map(([ attrName, values ]) => (
                                 <div key={attrName} className="mb-6">
-                                    <h3 className="text-[10px] uppercase tracking-[0.24em] font-medium mb-3" style={{ color: '#C9A96E' }}>
-                                        {attrName}
-                                    </h3>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-[10px] uppercase tracking-[0.24em] font-medium" style={{ color: '#C9A96E' }}>
+                                            {attrName}
+                                        </h3>
+                                        {/size/i.test(attrName) && (
+                                            <button type="button" className="link-btn" onClick={() => setShowSizeGuide(true)}>SIZE GUIDE</button>
+                                        )}
+                                    </div>
                                     <div className="flex flex-wrap gap-2">
                                         {values.map(val => {
                                             const isSelected = selectedAttributes[ attrName ] === val;
@@ -280,7 +352,6 @@ const ProductDetail = () => {
 
                             {/* Actions */}
                             <div className="flex flex-col gap-4 mt-auto">
-                                {actionMessage && <p role="status" className="text-sm" style={{ color: '#7A6E63' }}>{actionMessage}</p>}
                                 <button
                                     disabled={!activeVariant || activeVariant.stock <= 0}
                                     className="w-full py-4 text-[11px] uppercase tracking-[0.25em] font-medium transition-all duration-300"
@@ -321,6 +392,13 @@ const ProductDetail = () => {
                                 >
                                     Buy Now
                                 </button>
+
+                                <div className="flex gap-3">
+                                    <WishlistButton product={product} className="wishlist-btn--inline" />
+                                    <button type="button" onClick={handleShare} className="share-btn">
+                                        {shareMessage || 'SHARE'}
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Extra elegant details */}
@@ -341,8 +419,34 @@ const ProductDetail = () => {
 
                         </div>
                     </div>
+
+                    <div id="reviews">
+                        <Reviews productId={product._id} onSummary={setRatingSummary} />
+                    </div>
+
+                    <RecentlyViewed excludeId={product._id} />
+
+                    {related.length > 0 && (
+                        <section className="related" aria-label="You may also like">
+                            <h2>You may also like</h2>
+                            <div className="mini-grid">
+                                {related.map(item => (
+                                    <Link to={`/product/${item._id}`} key={item._id} className="mini-card">
+                                        <div className="mini-card__image">
+                                            {item.images?.[0]?.url ? <img src={item.images[0].url} alt={item.title} loading="lazy" /> : <span>SNITCH.</span>}
+                                            <WishlistButton product={item} className="mini-card__heart" />
+                                        </div>
+                                        <h3>{item.title}</h3>
+                                        <p>{formatPrice(item.price?.amount)}</p>
+                                    </Link>
+                                ))}
+                            </div>
+                        </section>
+                    )}
                 </div>
             </div>
+
+            {showSizeGuide && <SizeGuide onClose={() => setShowSizeGuide(false)} />}
         </>
     );
 };

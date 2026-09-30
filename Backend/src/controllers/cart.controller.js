@@ -7,6 +7,10 @@ import { getCartDetails } from "../dao/cart.dao.js";
 import paymentModel from "../models/payment.model.js";
 import { validatePaymentVerification } from "razorpay/dist/utils/razorpay-utils.js";
 import { config } from "../config/config.js";
+import couponModel from "../models/coupon.model.js";
+import { calculateTotals, evaluateCoupon } from "../utils/pricing.js";
+import { canBuyerCancel, canRequestReturn } from "../utils/orderStatus.js";
+import { sendOrderConfirmationEmail } from "../services/mail.service.js";
 
 
 
@@ -188,31 +192,80 @@ export const removeCartItem = async (req, res) => {
 }
 
 export const createOrderController = async (req, res) => {
-
+    const { addressId, couponCode } = req.body
 
     const cart = await getCartDetails(req.user._id)
 
-    if (!cart) {
+    if (!cart || !cart.items.length) {
         return res.status(400).json({
             message: "Cart is empty",
             success: false
         })
     }
 
-    const order = await createOrder({ amount: cart.totalPrice, currency: cart.currency })
+    const outOfStock = cart.items.find(item => item.product.variants.stock < item.quantity)
 
-    const payment = await paymentModel.create({
+    if (outOfStock) {
+        return res.status(400).json({
+            message: `"${outOfStock.product.title}" only has ${Math.max(outOfStock.product.variants.stock, 0)} left in stock. Please update your cart.`,
+            success: false
+        })
+    }
+
+    const address = req.user.addresses.id(addressId)
+
+    if (!address) {
+        return res.status(400).json({
+            message: "Please choose a delivery address",
+            success: false
+        })
+    }
+
+    let discount = 0
+    let appliedCoupon = null
+
+    if (couponCode) {
+        const coupon = await couponModel.findOne({ code: String(couponCode).trim().toUpperCase() })
+        const result = evaluateCoupon(coupon, cart.totalPrice)
+
+        if (!result.valid) {
+            return res.status(400).json({ message: result.reason, success: false })
+        }
+
+        discount = result.discount
+        appliedCoupon = { code: coupon.code, discount }
+    }
+
+    const totals = calculateTotals({ subtotal: cart.totalPrice, discount })
+
+    const order = await createOrder({ amount: totals.total, currency: cart.currency })
+
+    await paymentModel.create({
         user: req.user._id,
         razorpay: {
             orderId: order.id,
         },
         price: {
-            amount: cart.totalPrice,
+            amount: totals.total,
             currency: cart.currency
+        },
+        subtotal: totals.subtotal,
+        discount: totals.discount,
+        shipping: totals.shipping,
+        coupon: appliedCoupon || undefined,
+        shippingAddress: {
+            name: address.name,
+            phone: address.phone,
+            line1: address.line1,
+            line2: address.line2,
+            city: address.city,
+            state: address.state,
+            pincode: address.pincode
         },
         orderItems: cart.items.map(item => ({
             title: item.product.title,
             productId: item.product._id,
+            seller: item.product.seller,
             variantId: item.variant,
             attributes: item.product.variants.attributes,
             quantity: item.quantity,
@@ -229,6 +282,7 @@ export const createOrderController = async (req, res) => {
         message: "Order created successfully",
         success: true,
         order,
+        totals,
         keyId: config.RAZORPAY_KEY_ID
     })
 }
@@ -269,6 +323,8 @@ export const verifyOrderController = async (req, res) => {
     }
 
     payment.status = "paid"
+    payment.orderStatus = "placed"
+    payment.statusHistory.push({ status: "placed", note: "Payment received" })
 
     payment.razorpay.paymentId = razorpay_payment_id
     payment.razorpay.signature = razorpay_signature
@@ -278,14 +334,44 @@ export const verifyOrderController = async (req, res) => {
         { $inc: { "variants.$.stock": -item.quantity } }
     )))
 
+    if (payment.coupon?.code) {
+        await couponModel.updateOne({ code: payment.coupon.code }, { $inc: { usedCount: 1 } })
+    }
+
     await payment.save()
     await cartModel.findOneAndUpdate({ user: req.user._id }, { $set: { items: [] } })
+
+    await sendOrderConfirmationEmail(req.user, payment)
 
     return res.status(200).json({
         message: "Payment verified successfully",
         success: true
     })
 }
+
+export const serializeOrder = payment => ({
+    status: payment.status,
+    orderStatus: payment.orderStatus || "placed",
+    statusHistory: payment.statusHistory || [],
+    orderId: payment.razorpay.orderId,
+    createdAt: payment.createdAt,
+    deliveredAt: payment.deliveredAt,
+    shippingAddress: payment.shippingAddress,
+    subtotal: payment.subtotal,
+    discount: payment.discount || 0,
+    shipping: payment.shipping || 0,
+    coupon: payment.coupon,
+    refund: payment.refund,
+    canCancel: payment.status === "paid" && canBuyerCancel(payment.orderStatus || "placed"),
+    canReturn: payment.status === "paid" && canRequestReturn(payment.orderStatus, payment.deliveredAt),
+    items: payment.orderItems.map(item => ({
+        ...item,
+        attributes: item.attributes && typeof item.attributes[Symbol.iterator] === "function"
+            ? Object.fromEntries(item.attributes)
+            : item.attributes || {}
+    })),
+    total: payment.price
+})
 
 export const getOrderDetails = async (req, res) => {
     const payment = await paymentModel.findOne({
@@ -299,16 +385,17 @@ export const getOrderDetails = async (req, res) => {
 
     return res.status(200).json({
         success: true,
-        order: {
-            status: payment.status,
-            orderId: payment.razorpay.orderId,
-            items: payment.orderItems.map(item => ({
-                ...item,
-                attributes: item.attributes && typeof item.attributes[Symbol.iterator] === "function"
-                    ? Object.fromEntries(item.attributes)
-                    : item.attributes || {}
-            })),
-            total: payment.price
-        }
+        order: serializeOrder(payment)
+    })
+}
+
+export const getMyOrders = async (req, res) => {
+    const payments = await paymentModel.find({ user: req.user._id, status: "paid" })
+        .sort({ createdAt: -1 })
+        .lean()
+
+    return res.status(200).json({
+        success: true,
+        orders: payments.map(serializeOrder)
     })
 }

@@ -41,3 +41,13 @@ export async function updateProfile({ fullname, contact }) {
     const response = await authApiInstance.patch("/profile", { fullname, contact })
     return response.data
 }
+
+export async function forgotPassword(email) {
+    const response = await authApiInstance.post("/forgot-password", { email })
+    return response.data
+}
+
+export async function resetPassword({ token, password }) {
+    const response = await authApiInstance.post("/reset-password", { token, password })
+    return response.data
+}

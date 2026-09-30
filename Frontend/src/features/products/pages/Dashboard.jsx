@@ -1,4 +1,6 @@
-import React, { useEffect, useEffectEvent } from 'react';
+import React, { useEffect, useEffectEvent, useState } from 'react';
+import SellerTabs from '../../seller/components/SellerTabs';
+import { updateProduct, deleteProduct } from '../service/product.api';
 import { useProduct } from '../hooks/useProduct';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router';
@@ -7,6 +9,39 @@ const Dashboard = () => {
     const { handleGetSellerProduct } = useProduct();
     const sellerProducts = useSelector(state => state.product.sellerProducts);
     const navigate = useNavigate();
+    const [ editing, setEditing ] = useState(null);
+    const [ deleting, setDeleting ] = useState(null);
+    const [ busy, setBusy ] = useState(false);
+    const [ error, setError ] = useState('');
+
+    const saveEdit = async event => {
+        event.preventDefault();
+        setBusy(true);
+        setError('');
+        try {
+            await updateProduct(editing._id, { title: editing.title, description: editing.description, priceAmount: editing.priceAmount });
+            setEditing(null);
+            await handleGetSellerProduct();
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || 'Could not save changes.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const confirmDelete = async () => {
+        setBusy(true);
+        setError('');
+        try {
+            await deleteProduct(deleting._id);
+            setDeleting(null);
+            await handleGetSellerProduct();
+        } catch (requestError) {
+            setError(requestError.response?.data?.message || 'Could not delete this product.');
+        } finally {
+            setBusy(false);
+        }
+    };
 
     const loadSellerProducts = useEffectEvent(() => handleGetSellerProduct());
 
@@ -26,7 +61,7 @@ const Dashboard = () => {
                 className="min-h-screen selection:bg-[#C9A96E]/30"
                 style={{ backgroundColor: '#fbf9f6', fontFamily: "'Inter', sans-serif" }}
             >
-                <div className="max-w-7xl mx-auto px-8 lg:px-16 xl:px-24">
+                <div className="max-w-7xl mx-auto px-5 sm:px-8 lg:px-16 xl:px-24">
 
                     {/* ── Top Bar ── */}
                     <div className="pt-10 pb-0 flex items-center gap-5">
@@ -82,6 +117,8 @@ const Dashboard = () => {
                         </button>
                     </div>
 
+                    <SellerTabs />
+
                     {/* ── Product Grid ── */}
                     {sellerProducts && sellerProducts.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16 pb-24">
@@ -99,7 +136,7 @@ const Dashboard = () => {
                                             <img
                                                 src={imageUrl}
                                                 alt={product.title}
-                                                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                                className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
                                             />
                                         </div>
 
@@ -129,6 +166,11 @@ const Dashboard = () => {
                                                     {product.price?.currency} {product.price?.amount?.toLocaleString()}
                                                 </span>
                                             </div>
+
+                                            <div className="seller-actions" onClick={event => event.stopPropagation()}>
+                                                <button type="button" onClick={() => { setError(''); setEditing({ _id: product._id, title: product.title, description: product.description, priceAmount: product.price?.amount }); }}>Edit</button>
+                                                <button type="button" className="is-danger" onClick={() => { setError(''); setDeleting(product); }}>Delete</button>
+                                            </div>
                                         </div>
                                     </div>
                                 );
@@ -144,6 +186,42 @@ const Dashboard = () => {
                     )}
                 </div>
             </div>
+
+            {editing && (
+                <div className="seller-modal" role="dialog" aria-modal="true" aria-label="Edit product">
+                    <form onSubmit={saveEdit}>
+                        <h2>Edit listing</h2>
+                        <label>Title
+                            <input required value={editing.title} onChange={event => setEditing({ ...editing, title: event.target.value })} />
+                        </label>
+                        <label>Description
+                            <textarea required rows={4} value={editing.description} onChange={event => setEditing({ ...editing, description: event.target.value })} />
+                        </label>
+                        <label>Price (INR)
+                            <input required type="number" min="1" value={editing.priceAmount} onChange={event => setEditing({ ...editing, priceAmount: event.target.value })} />
+                        </label>
+                        {error && <p role="alert" style={{ color: '#ba1a1a', fontSize: 12, margin: 0 }}>{error}</p>}
+                        <div className="seller-actions">
+                            <button type="submit" disabled={busy}>{busy ? 'Saving...' : 'Save changes'}</button>
+                            <button type="button" onClick={() => setEditing(null)}>Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {deleting && (
+                <div className="seller-modal" role="alertdialog" aria-modal="true" aria-label="Delete product">
+                    <div>
+                        <h2>Delete this listing?</h2>
+                        <p style={{ margin: 0, fontSize: 13 }}>"{deleting.title}" will be removed from the shop, and from all carts and wishlists. This cannot be undone.</p>
+                        {error && <p role="alert" style={{ color: '#ba1a1a', fontSize: 12, margin: 0 }}>{error}</p>}
+                        <div className="seller-actions">
+                            <button type="button" className="is-danger" disabled={busy} onClick={confirmDelete}>{busy ? 'Deleting...' : 'Yes, delete'}</button>
+                            <button type="button" onClick={() => setDeleting(null)}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

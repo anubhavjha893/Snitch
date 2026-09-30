@@ -7,10 +7,19 @@ import Protected from "../features/auth/components/Protected";
 import Home from "../features/products/pages/Home";
 import ProductDetail from "../features/products/pages/ProductDetail";
 import SellerProductDetails from "../features/products/pages/SellerProductDetails";
-import Cart from "../features/cart/pages/Cart";
 import AppLayout from "./AppLayout";
 import OrderSuccess from "../features/cart/pages/OrderReceipt";
 import Account from "../features/auth/pages/Account";
+import Wishlist from "../features/wishlist/pages/Wishlist";
+import Orders from "../features/orders/pages/Orders";
+import CartRoute from "../features/cart/pages/CartRoute";
+import Checkout from "../features/checkout/pages/Checkout";
+import ForgotPassword from "../features/auth/pages/ForgotPassword";
+import ResetPassword from "../features/auth/pages/ResetPassword";
+import SellerOrders from "../features/seller/pages/SellerOrders";
+import SellerAnalytics from "../features/seller/pages/SellerAnalytics";
+import SellerCoupons from "../features/seller/pages/SellerCoupons";
+import NotFound from "../features/Shared/Components/NotFound";
 
 export const routes = createBrowserRouter([
 
@@ -35,11 +44,31 @@ export const routes = createBrowserRouter([
             },
             {
                 path: "/cart",
-                element: <Protected> <Cart /></Protected>
+                element: <CartRoute />
+            },
+            {
+                path: "/checkout",
+                element: <Protected><Checkout /></Protected>
+            },
+            {
+                path: "/forgot-password",
+                element: <ForgotPassword />
+            },
+            {
+                path: "/reset-password",
+                element: <ResetPassword />
             },
             {
                 path: "/account",
                 element: <Protected><Account /></Protected>
+            },
+            {
+                path: "/wishlist",
+                element: <Protected><Wishlist /></Protected>
+            },
+            {
+                path: "/orders",
+                element: <Protected><Orders /></Protected>
             },
             {
                 path: "/order-success",
@@ -56,6 +85,18 @@ export const routes = createBrowserRouter([
                         </Protected>
                     },
                     {
+                        path: "/seller/orders",
+                        element: <Protected role="seller"><SellerOrders /></Protected>
+                    },
+                    {
+                        path: "/seller/analytics",
+                        element: <Protected role="seller"><SellerAnalytics /></Protected>
+                    },
+                    {
+                        path: "/seller/coupons",
+                        element: <Protected role="seller"><SellerCoupons /></Protected>
+                    },
+                    {
                         path: "/seller/dashboard",
                         element: <Protected role="seller" >
                             <Dashboard />
@@ -68,6 +109,10 @@ export const routes = createBrowserRouter([
                         </Protected>
                     }
                 ]
+            },
+            {
+                path: "*",
+                element: <NotFound />
             }
         ]
     }

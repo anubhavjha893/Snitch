@@ -17,6 +17,43 @@ const paymentSchema = new mongoose.Schema({
         paymentId: String,
         signature: String
     },
+    subtotal: Number,
+    discount: { type: Number, default: 0 },
+    shipping: { type: Number, default: 0 },
+    coupon: {
+        code: String,
+        discount: Number
+    },
+    shippingAddress: {
+        name: String,
+        phone: String,
+        line1: String,
+        line2: String,
+        city: String,
+        state: String,
+        pincode: String
+    },
+    orderStatus: {
+        type: String,
+        enum: [ "placed", "shipped", "delivered", "cancelled", "return_requested", "returned" ],
+        default: "placed"
+    },
+    statusHistory: [
+        {
+            _id: false,
+            status: String,
+            note: String,
+            at: { type: Date, default: Date.now }
+        }
+    ],
+    deliveredAt: Date,
+    cancelReason: String,
+    returnReason: String,
+    refund: {
+        id: String,
+        status: String,
+        amount: Number
+    },
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "user",
@@ -26,6 +63,7 @@ const paymentSchema = new mongoose.Schema({
         {
             title: String,
             productId: mongoose.Schema.Types.ObjectId,
+            seller: mongoose.Schema.Types.ObjectId,
             variantId: mongoose.Schema.Types.ObjectId,
             attributes: {
                 type: Map,
@@ -37,7 +75,7 @@ const paymentSchema = new mongoose.Schema({
             price: priceSchema
         }
     ]
-})
+}, { timestamps: true })
 
 
 const paymentModel = mongoose.model("payment", paymentSchema)

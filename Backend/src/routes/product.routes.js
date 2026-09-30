@@ -1,6 +1,6 @@
 import express from 'express';
-import { authenticateSeller } from '../middlewares/auth.middleware.js';
-import { createProduct, getAllProducts, getSellerProducts, getProductDetails, addProductVariant, updateProductVariantStock } from '../controllers/product.controller.js';
+import { authenticateSeller, authenticateUser } from '../middlewares/auth.middleware.js';
+import { createProduct, getAllProducts, getSellerProducts, getProductDetails, addProductVariant, updateProductVariantStock, updateProduct, deleteProduct, getProductReviews, addProductReview, deleteProductReview } from '../controllers/product.controller.js';
 import multer from "multer";
 import { createProductValidator, validateVariantStock } from '../validator/product.validator.js';
 
@@ -56,5 +56,25 @@ router.get("/detail/:id", getProductDetails)
 router.post("/:productId/variants", authenticateSeller, upload.array('images', 7), addProductVariant)
 
 router.patch("/:productId/variants/:variantId/stock", authenticateSeller, validateVariantStock, updateProductVariantStock)
+
+router.patch("/:productId", authenticateSeller, updateProduct)
+
+router.delete("/:productId", authenticateSeller, deleteProduct)
+
+router.get("/:productId/reviews", getProductReviews)
+
+router.post("/:productId/reviews", authenticateUser, addProductReview)
+
+router.delete("/:productId/reviews", authenticateUser, deleteProductReview)
+
+router.patch("/:productId", authenticateSeller, updateProduct)
+
+router.delete("/:productId", authenticateSeller, deleteProduct)
+
+router.get("/:productId/reviews", getProductReviews)
+
+router.post("/:productId/reviews", authenticateUser, addProductReview)
+
+router.delete("/:productId/reviews", authenticateUser, deleteProductReview)
 
 export default router;

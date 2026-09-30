@@ -1,4 +1,6 @@
 import './App.css'
+import './extras.css'
+import './extras2.css'
 import { RouterProvider } from 'react-router'
 import { routes } from './app.routes'
 import { useDispatch } from 'react-redux'

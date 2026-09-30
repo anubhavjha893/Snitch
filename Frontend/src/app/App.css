@@ -11,6 +11,7 @@
 	--app-accent: #ef563b;
 	--app-highlight: #d8e63b;
 	--app-button: #171717;
+	--app-button-text: #ffffff;
 }
 
 :root[data-theme="dark"] {
@@ -24,6 +25,7 @@
 	--app-accent: #A8DADC;
 	--app-highlight: #FFC1CC;
 	--app-button: #B39CD0;
+	--app-button-text: #2C2C2C;
 }
 
 html,
@@ -146,7 +148,7 @@ body {
 }
 
 .theme-toggle:hover {
-	color: #2C2C2C;
+	color: var(--app-button-text);
 	background: var(--app-button);
 	transform: translateY(-2px);
 }
@@ -156,14 +158,6 @@ body {
 	height: 19px;
 }
 
-.snitch-nav a:first-child {
-	color: var(--app-text) !important;
-}
-
-:root[data-theme="dark"] .snitch-nav a,
-:root[data-theme="dark"] .snitch-nav button {
-	color: var(--app-text);
-}
 
 .account-page {
 	min-height: calc(100vh - 64px);
@@ -239,7 +233,7 @@ body {
 .account-form button {
 	min-height: 46px;
 	border: 0;
-	color: #2C2C2C;
+	color: var(--app-button-text);
 	background: var(--app-button);
 	font: inherit;
 	font-size: 10px;
@@ -363,7 +357,7 @@ body {
 }
 
 .order-receipt__button {
-	color: #2C2C2C;
+	color: var(--app-button-text);
 	background: var(--app-button);
 }
 

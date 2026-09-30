@@ -50,3 +50,28 @@ export async function updateProductVariantStock(productId, variantId, stock) {
     const response = await productApiInstance.patch(`/${productId}/variants/${variantId}/stock`, { stock })
     return response.data
 }
+
+export async function getReviews(productId) {
+    const response = await productApiInstance.get(`/${productId}/reviews`)
+    return response.data
+}
+
+export async function saveReview(productId, { rating, comment }) {
+    const response = await productApiInstance.post(`/${productId}/reviews`, { rating, comment })
+    return response.data
+}
+
+export async function deleteReview(productId) {
+    const response = await productApiInstance.delete(`/${productId}/reviews`)
+    return response.data
+}
+
+export async function updateProduct(productId, updates) {
+    const response = await productApiInstance.patch(`/${productId}`, updates)
+    return response.data
+}
+
+export async function deleteProduct(productId) {
+    const response = await productApiInstance.delete(`/${productId}`)
+    return response.data
+}
