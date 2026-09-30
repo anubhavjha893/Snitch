@@ -35,8 +35,8 @@ export const useCart = () => {
         return handleGetCart()
     }, [ handleGetCart ])
 
-    const handleCreateCartOrder = useCallback(async () => {
-        const data = await createCartOrder()
+    const handleCreateCartOrder = useCallback(async ({ addressId, couponCode } = {}) => {
+        const data = await createCartOrder({ addressId, couponCode })
         return data
     }, [])
 

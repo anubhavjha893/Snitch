@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { Link } from 'react-router';
 import { updateProfile } from '../service/auth.api';
 import { setUser } from '../state/auth.slice';
+import AddressBook from '../../addresses/components/AddressBook';
+import { usePageMeta } from '../../Shared/hooks/usePageMeta';
 
 const Account = () => {
+    usePageMeta({ title: 'My account' });
     const dispatch = useDispatch();
     const user = useSelector(state => state.auth.user);
     const [ fullname, setFullname ] = useState(user?.fullname || '');
@@ -33,6 +37,12 @@ const Account = () => {
         <main className="account-page">
             <div className="account-page__eyebrow">YOUR ACCOUNT / DETAILS</div>
             <h1>Account details</h1>
+            <p className="account-role">
+                <span className={`role-badge role-badge--${user?.role}`}>
+                    {user?.role === 'seller' ? 'SELLER / ADMIN' : 'BUYER / USER'}
+                </span>
+                {user?.role === 'seller' && <Link to="/seller/dashboard" className="link-btn">OPEN SELLER DASHBOARD</Link>}
+            </p>
             <p className="account-page__intro">Keep your contact details up to date for a smoother checkout.</p>
 
             <form className="account-form" onSubmit={handleSubmit}>
@@ -52,6 +62,12 @@ const Account = () => {
                 {error && <p className="account-form__error" role="alert">{error}</p>}
                 <button type="submit" disabled={isSaving}>{isSaving ? 'SAVING...' : 'SAVE DETAILS'}</button>
             </form>
+
+            <section className="account-section">
+                <h2>Saved addresses</h2>
+                <p className="account-page__intro">Used for delivery at checkout.</p>
+                <AddressBook />
+            </section>
         </main>
     );
 };

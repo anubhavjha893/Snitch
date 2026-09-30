@@ -1,5 +1,7 @@
 import userModel from "../models/user.model.js";
 import jwt from "jsonwebtoken"
+import crypto from "node:crypto";
+import { sendPasswordResetEmail } from "../services/mail.service.js";
 import { config } from "../config/config.js";
 
 
@@ -116,7 +118,7 @@ export const googleCallback = async (req, res) => {
         path: "/"
     })
 
-    res.redirect("http://localhost:5173/")
+    res.redirect(config.NODE_ENV === "development" ? "http://localhost:5173/" : (config.FRONTEND_URL || "/"))
 }
 
 export const getMe = async (req, res) => {
@@ -162,4 +164,56 @@ export const updateProfile = async (req, res) => {
             role: req.user.role
         }
     })
+}
+
+const hashToken = token => crypto.createHash("sha256").update(token).digest("hex")
+
+export const forgotPassword = async (req, res) => {
+    const email = String(req.body.email || "").trim()
+
+    // always answer the same way so the endpoint cannot be used to discover which emails exist
+    const reply = () => res.status(200).json({
+        success: true,
+        message: "If an account exists for that email, a reset link is on its way."
+    })
+
+    const user = await userModel.findOne({ email })
+
+    if (!user) return reply()
+
+    const token = crypto.randomBytes(32).toString("hex")
+
+    user.resetPasswordToken = hashToken(token)
+    user.resetPasswordExpires = new Date(Date.now() + 30 * 60 * 1000)
+    await user.save({ validateBeforeSave: false })
+
+    const baseUrl = config.NODE_ENV === "development" ? "http://localhost:5173" : (config.FRONTEND_URL || "")
+
+    await sendPasswordResetEmail(user, `${baseUrl}/reset-password?token=${token}`)
+
+    return reply()
+}
+
+export const resetPassword = async (req, res) => {
+    const { token, password } = req.body
+
+    if (!token || typeof password !== "string" || password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long", success: false })
+    }
+
+    const user = await userModel.findOne({
+        resetPasswordToken: hashToken(String(token)),
+        resetPasswordExpires: { $gt: new Date() }
+    }).select("+resetPasswordToken +resetPasswordExpires")
+
+    if (!user) {
+        return res.status(400).json({ message: "This reset link is invalid or has expired", success: false })
+    }
+
+    user.password = password
+    user.resetPasswordToken = undefined
+    user.resetPasswordExpires = undefined
+    await user.save()
+
+    return res.status(200).json({ success: true, message: "Password updated. You can sign in now." })
 }

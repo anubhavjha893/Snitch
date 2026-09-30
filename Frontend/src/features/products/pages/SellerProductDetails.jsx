@@ -208,7 +208,7 @@ const SellerProductDetails = () => {
             {/* Gallery placeholder */}
             <div className="w-full aspect-[4/5] bg-[#f5f3f0] overflow-hidden">
               {product.images && product.images.length > 0 ? (
-                <img src={product.images[ 0 ].url} alt={product.title} className="w-full h-full object-cover" />
+                <img src={product.images[ 0 ].url} alt={product.title} className="w-full h-full object-cover object-top" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-[#7f7668]">No Image</div>
               )}
@@ -217,7 +217,7 @@ const SellerProductDetails = () => {
             {product.images && product.images.length > 1 && (
               <div className="flex gap-2 mt-2 overflow-x-auto">
                 {product.images.slice(1).map((img, i) => (
-                  <img key={i} src={img.url} alt={`Thumb ${i}`} className="w-16 h-20 object-cover bg-[#f5f3f0] shrink-0" />
+                  <img key={i} src={img.url} alt={`Thumb ${i}`} className="w-16 h-20 object-cover object-top bg-[#f5f3f0] shrink-0" />
                 ))}
               </div>
             )}
@@ -334,7 +334,7 @@ const SellerProductDetails = () => {
                     <div className="grid grid-cols-3 gap-2 mb-4">
                       {newVariant.images.map((img, index) => (
                         <div key={index} className="relative aspect-[4/5] bg-[#f5f3f0]">
-                          <img src={img.previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                          <img src={img.previewUrl} alt="Preview" className="w-full h-full object-cover object-top" />
                           <button
                             onClick={() => handleRemoveImage(index)}
                             className="absolute top-1 right-1 bg-white/80 p-1 text-[#ba1a1a] hover:bg-white transition-colors cursor-pointer"
@@ -388,7 +388,7 @@ const SellerProductDetails = () => {
                     {/* Variant Thumb */}
                     <div className="w-16 h-20 bg-[#f5f3f0] shrink-0">
                       {variant.images && variant.images.length > 0 ? (
-                        <img src={variant.images[ 0 ].url} alt="Variant" className="w-full h-full object-cover" />
+                        <img src={variant.images[ 0 ].url} alt="Variant" className="w-full h-full object-cover object-top" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-xs text-[#7f7668]">N/A</div>
                       )}

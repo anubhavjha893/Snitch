@@ -35,8 +35,8 @@ export const removeCartItemApi = async ({ productId, variantId }) => {
     return response.data
 }
 
-export const createCartOrder = async () => {
-    const response = await cartApiInstance.post("/payment/create/order")
+export const createCartOrder = async ({ addressId, couponCode } = {}) => {
+    const response = await cartApiInstance.post("/payment/create/order", { addressId, couponCode })
     return response.data
 }
 
@@ -52,5 +52,26 @@ export const verifyCartOrder = async ({ razorpay_order_id, razorpay_payment_id, 
 
 export const getOrderDetails = async (orderId) => {
     const response = await cartApiInstance.get(`/payment/order/${orderId}`)
+    return response.data
+}
+
+export const getMyOrders = async () => {
+    const response = await cartApiInstance.get("/orders")
+    return response.data
+}
+
+
+export const validateCoupon = async code => {
+    const response = await axios.post("/api/coupons/validate", { code }, { withCredentials: true })
+    return response.data
+}
+
+export const cancelOrderApi = async (orderId, reason) => {
+    const response = await axios.post(`/api/orders/${orderId}/cancel`, { reason }, { withCredentials: true })
+    return response.data
+}
+
+export const requestReturnApi = async (orderId, reason) => {
+    const response = await axios.post(`/api/orders/${orderId}/return`, { reason }, { withCredentials: true })
     return response.data
 }

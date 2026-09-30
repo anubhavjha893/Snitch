@@ -3,6 +3,8 @@ import userModel from "./models/user.model.js";
 
 const imageBase = "https://cdn.shopify.com/s/files/1/0420/7073/7058/files";
 
+const photo = id => `https://images.unsplash.com/photo-${id}?w=900&q=80&auto=format&fit=crop`;
+
 const catalog = [
     {
         catalogKey: "snitch-geometric-shirt",
@@ -59,8 +61,51 @@ const catalog = [
         amount: 1799,
         fit: "Regular Fit",
         image: `${imageBase}/1_1d3d3ba1-b168-473f-becc-e1034fd4380a.jpg?v=1790342078`
+    },
+    {
+        catalogKey: "snitch-teal-pinstripe-shirt",
+        title: "Teal Pinstripe Regular Fit Shirt",
+        description: "A soft teal pinstripe shirt with a chest pocket and button-down collar. Roll the sleeves and it works from campus to coffee.",
+        amount: 1399,
+        fit: "Regular Fit",
+        image: photo("1589310243389-96a5483213a8")
+    },
+    {
+        catalogKey: "snitch-yellow-check-flannel-shirt",
+        title: "Yellow Check Oversized Flannel Shirt",
+        description: "A brushed flannel in navy and mustard checks with twin flap pockets. Cut in an oversized fit to wear open over a tee.",
+        amount: 1899,
+        fit: "Oversized Fit",
+        image: photo("1607345366928-199ea26cfe3e")
+    },
+    {
+        catalogKey: "snitch-sky-blue-pinstripe-shirt",
+        title: "Sky Blue Pinstripe Regular Fit Shirt",
+        description: "A crisp sky blue pinstripe shirt with a sharp collar and a clean regular fit. Made for meetings that turn into dinners.",
+        amount: 1599,
+        fit: "Regular Fit",
+        image: photo("1620012253295-c15cc3e65df4")
+    },
+    {
+        catalogKey: "snitch-white-crown-shirt",
+        title: "Classic White Crown Embroidered Shirt",
+        description: "A breathable white cotton shirt with a small embroidered crown on the chest. Regular fit, easy to dress up or down.",
+        amount: 1499,
+        fit: "Regular Fit",
+        image: photo("1621072156002-e2fccdc0b176")
+    },
+    {
+        catalogKey: "snitch-tie-dye-gradient-shirt",
+        title: "Tie-Dye Gradient Printed Shirt",
+        description: "A hand-dyed gradient print in soft summer colours, cut in a relaxed oversized fit with a spread collar.",
+        amount: 1699,
+        fit: "Oversized Fit",
+        image: photo("1626497764746-6dc36546b388")
     }
 ];
+
+// demo products that were removed from the catalog; cleaned out of existing databases on seed
+const retiredKeys = [ "snitch-chambray-heart-print-shirt" ];
 
 export async function seedCatalog() {
     const seller = await userModel.findOneAndUpdate(
@@ -74,6 +119,8 @@ export async function seedCatalog() {
         },
         { returnDocument: "after", upsert: true, setDefaultsOnInsert: true }
     );
+
+    await productModel.deleteMany({ catalogKey: { $in: retiredKeys } });
 
     let seededCount = 0;
 

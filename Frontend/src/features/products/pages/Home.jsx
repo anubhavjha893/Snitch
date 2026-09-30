@@ -3,8 +3,20 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router';
 import { getAllProducts } from '../service/product.api';
 import { setProducts } from '../state/product.slice';
+import WishlistButton from '../../wishlist/components/WishlistButton';
+import Stars from '../components/Stars';
+import RecentlyViewed from '../components/RecentlyViewed';
+import { SkeletonGrid } from '../../Shared/Components/Skeleton';
+import { usePageMeta } from '../../Shared/hooks/usePageMeta';
 import './Home.css';
 
+const PAGE_SIZE = 8;
+const priceRanges = [
+    { id: 'all', label: 'Any price', test: () => true },
+    { id: 'under-1200', label: 'Under ₹1,200', test: amount => amount < 1200 },
+    { id: '1200-1500', label: '₹1,200 – ₹1,500', test: amount => amount >= 1200 && amount <= 1500 },
+    { id: 'above-1500', label: 'Above ₹1,500', test: amount => amount > 1500 },
+];
 const filters = [ 'All shirts', 'Oversized', 'Printed', 'Regular fit' ];
 
 const Home = () => {
@@ -13,9 +25,17 @@ const Home = () => {
     const [ activeFilter, setActiveFilter ] = useState('All shirts');
     const [ search, setSearch ] = useState('');
     const [ sort, setSort ] = useState('featured');
+    const [ priceRange, setPriceRange ] = useState('all');
+    const [ searchFocused, setSearchFocused ] = useState(false);
     const [ isLoading, setIsLoading ] = useState(true);
     const [ hasError, setHasError ] = useState(false);
+    const [ limit, setLimit ] = useState({ key: '', count: PAGE_SIZE });
     const deferredSearch = useDeferredValue(search.trim().toLowerCase());
+
+    usePageMeta({
+        title: 'SNITCH. | Wear Your Own Rules',
+        description: 'Oversized, printed and regular fit shirts made for the way you move. Shop the new SNITCH. drop.',
+    });
 
     useEffect(() => {
         getAllProducts()
@@ -33,7 +53,9 @@ const Home = () => {
                 || (activeFilter === 'Printed' && /print|geometric|paisley|floral/i.test(searchableText))
                 || (activeFilter === 'Regular fit' && /regular fit/i.test(searchableText));
 
-            return matchesSearch && matchesFilter;
+            const matchesPrice = priceRanges.find(range => range.id === priceRange).test(product.price?.amount || 0);
+
+            return matchesSearch && matchesFilter && matchesPrice;
         })
         .sort((first, second) => {
             if (sort === 'price-low') return first.price.amount - second.price.amount;
@@ -41,6 +63,13 @@ const Home = () => {
             if (sort === 'latest') return new Date(second.createdAt) - new Date(first.createdAt);
             return 0;
         });
+
+    const resultKey = `${activeFilter}|${deferredSearch}|${sort}|${priceRange}`;
+    const visibleCount = limit.key === resultKey ? limit.count : PAGE_SIZE;
+
+    const suggestions = search.trim().length >= 2
+        ? (products || []).filter(product => product.title.toLowerCase().includes(search.trim().toLowerCase())).slice(0, 5)
+        : [];
 
     const formatPrice = amount => `₹${Number(amount || 0).toLocaleString('en-IN')}`;
 
@@ -107,9 +136,30 @@ const Home = () => {
                                 type="search"
                                 value={search}
                                 onChange={event => setSearch(event.target.value)}
+                                onFocus={() => setSearchFocused(true)}
+                                onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
                                 placeholder="Find your fit"
                                 aria-label="Search products"
+                                autoComplete="off"
                             />
+                            {searchFocused && suggestions.length > 0 && (
+                                <ul className="snitch-suggestions" role="listbox">
+                                    {suggestions.map(product => (
+                                        <li key={product._id} role="option">
+                                            <Link to={`/product/${product._id}`}>
+                                                <span>{product.title}</span>
+                                                <small>{formatPrice(product.price?.amount)}</small>
+                                            </Link>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </label>
+                        <label className="snitch-sort">
+                            <span className="snitch-sort__label">PRICE</span>
+                            <select value={priceRange} onChange={event => setPriceRange(event.target.value)} aria-label="Filter by price">
+                                {priceRanges.map(range => <option key={range.id} value={range.id}>{range.label}</option>)}
+                            </select>
                         </label>
                         <label className="snitch-sort">
                             <span className="snitch-sort__label">SORT</span>
@@ -128,7 +178,7 @@ const Home = () => {
                 </div>
 
                 {isLoading ? (
-                    <div className="snitch-empty">Loading the latest fits...</div>
+                    <SkeletonGrid />
                 ) : hasError ? (
                     <div className="snitch-empty">
                         <h3>THE RACK IS OFFLINE.</h3>
@@ -136,8 +186,9 @@ const Home = () => {
                         <button type="button" onClick={() => window.location.reload()}>TRY AGAIN</button>
                     </div>
                 ) : visibleProducts.length ? (
+                    <>
                     <div className="snitch-grid">
-                        {visibleProducts.map((product, index) => {
+                        {visibleProducts.slice(0, visibleCount).map((product, index) => {
                             const imageUrl = product.images?.[0]?.url;
                             const fit = product.variants?.[0]?.attributes?.Fit || 'Everyday fit';
 
@@ -152,7 +203,7 @@ const Home = () => {
                                         <span className={`snitch-product__badge ${index % 3 === 1 ? 'snitch-product__badge--lime' : ''}`}>
                                             {index === 0 ? 'JUST DROPPED' : index % 3 === 1 ? 'TRENDING' : 'NEW SEASON'}
                                         </span>
-                                        <span className="snitch-product__arrow" aria-hidden="true">↗</span>
+                                        <WishlistButton product={product} className="snitch-product__heart" />
                                     </div>
                                     <div className="snitch-product__details">
                                         <div>
@@ -161,24 +212,33 @@ const Home = () => {
                                         </div>
                                         <p className="snitch-product__price">{formatPrice(product.price?.amount)}</p>
                                     </div>
+                                    {product.rating?.count > 0 && (
+                                        <p className="snitch-product__rating"><Stars value={product.rating.average} size={12} /> <span>({product.rating.count})</span></p>
+                                    )}
                                 </Link>
                             );
                         })}
                     </div>
+                    {visibleCount < visibleProducts.length && (
+                        <div className="snitch-loadmore">
+                            <button type="button" onClick={() => setLimit({ key: resultKey, count: visibleCount + PAGE_SIZE })}>
+                                LOAD MORE ({visibleProducts.length - visibleCount} LEFT)
+                            </button>
+                        </div>
+                    )}
+                    </>
                 ) : (
                     <div className="snitch-empty">
                         <h3>NO MATCHES. YET.</h3>
                         <p>Try another search or clear the current filter.</p>
-                        <button type="button" onClick={() => { setSearch(''); setActiveFilter('All shirts'); }}>SHOW ALL SHIRTS</button>
+                        <button type="button" onClick={() => { setSearch(''); setActiveFilter('All shirts'); setPriceRange('all'); }}>SHOW ALL SHIRTS</button>
                     </div>
                 )}
             </section>
 
-            <footer className="snitch-footer">
-                <span>SNITCH.</span>
-                <span>MADE FOR THE WAY YOU MOVE.</span>
-                <span>© {new Date().getFullYear()}</span>
-            </footer>
+            <div className="snitch-recent">
+                <RecentlyViewed />
+            </div>
         </main>
     );
 };

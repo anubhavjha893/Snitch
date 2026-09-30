@@ -1,18 +1,21 @@
 import { setLoading, setUser } from "../state/auth.slice"
 import { register, login, getMe } from "../service/auth.api"
-import { useDispatch } from "react-redux"
+import { useDispatch, useStore } from "react-redux"
+import { mergeGuestCart } from "../../guest/mergeGuestCart"
 
 
 
 export const useAuth = () => {
 
     const dispatch = useDispatch()
+    const store = useStore()
 
     async function handleRegister({ email, contact, password, fullname, isSeller = false }) {
 
         const data = await register({ email, contact, password, fullname, isSeller })
 
         dispatch(setUser(data.user))
+        await mergeGuestCart(store)
 
         return data.user
     }
@@ -21,6 +24,7 @@ export const useAuth = () => {
 
         const data = await login({ email, password })
         dispatch(setUser(data.user))
+        await mergeGuestCart(store)
         return data.user
     }
 

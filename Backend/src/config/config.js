@@ -39,6 +39,11 @@ export const config = {
     IMAGEKIT_PRIVATE_KEY: process.env.IMAGEKIT_PRIVATE_KEY,
     RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
     RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET,
-    FRONTEND_URL: process.env.FRONTEND_URL
+    FRONTEND_URL: process.env.FRONTEND_URL,
+    SMTP_HOST: process.env.SMTP_HOST,
+    SMTP_PORT: Number(process.env.SMTP_PORT) || 587,
+    SMTP_USER: process.env.SMTP_USER,
+    SMTP_PASS: process.env.SMTP_PASS,
+    MAIL_FROM: process.env.MAIL_FROM || "SNITCH. <no-reply@snitch.local>"
 }
 
